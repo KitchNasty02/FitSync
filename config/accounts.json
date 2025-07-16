@@ -1,6 +1,14 @@
 {
     "Connor Kitchin": {
+        "name": "Connor Kitchin",
         "username": "connorkitch10@gmail.com",
-        "password": "gAAAAABodVKlkiiPgULGqlZgqT2C0xkgNkhbw4ThgXCzoNOKHOWobCVw2X-EV5DNrARkib-b3yBfvQWDWubjq2BDRXO2FpkgHw=="
+        "password": "gAAAAABodxcojjPUzsVRLQXRt3hDHkOcMX9ii9_7kq0lIgcz1Y28QLCxTsuJE7IDHsQJvSZYuaMv4o0yQT6w_2uRZfdhoTpYpQ==",
+        "google_email": "connorkitch10@gmail.com"
+    },
+    "Josh Kitchin": {
+        "name": "Josh Kitchin",
+        "username": "joshkitchin@gmail.com",
+        "password": "gAAAAABodxdEuzIcA4XC5rR_PTu4q1AJWkkohihWyyqyV24pRRrd0qMcTVwovlVejyqlSapYTBPiKR0Frlyzi5FwHLQ63HoKPg==",
+        "google_email": "joshkitchin@gmail.com"
     }
 }

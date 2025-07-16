@@ -4,7 +4,7 @@ import os
 
 
 # saves username and encrypted password to accounts.json
-def save_account(name, username, encrypted_pw, path="config/accounts.json"):
+def save_account(name, username, encrypted_pw, google_email, path="config/accounts.json"):
     # load existing accounts
     if os.path.exists(path):
         with open(path, "r") as file:
@@ -14,8 +14,10 @@ def save_account(name, username, encrypted_pw, path="config/accounts.json"):
 
     # add new user
     accounts[name] = {
+        "name": name,
         "username": username,
-        "password": encrypted_pw
+        "password": encrypted_pw,
+        "google_email": google_email
     }
 
     # save
@@ -24,10 +26,11 @@ def save_account(name, username, encrypted_pw, path="config/accounts.json"):
 
 
 name = input("Enter Persons Name: ")
-username = input("Enter GarminConnect Username/Email: ")
+username = input("Enter GarminConnect Email: ")
 password = input("Enter Password: ")
+google_email = input("Enter Google Email: ")
 
 key = load_key()
 encrypted_password = encrypt_password(password, key)
-save_account(name, username, encrypted_password)
+save_account(name, username, encrypted_password, google_email)
 print("Account Saved.")
