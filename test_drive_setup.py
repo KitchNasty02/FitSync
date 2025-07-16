@@ -24,8 +24,3 @@ share_sheet_with_user(drive_service, sheet_id, TEST_USER, ADMIN_EMAIL)
 
 # Done!
 print(f"Sheet created: {sheet_url}")
-
-
-
-# TODO:
-# - make a new sheet from accounts.json
