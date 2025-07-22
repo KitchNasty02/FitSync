@@ -3,6 +3,7 @@ from google.oauth2.credentials import Credentials
 import gspread
 import os
 
+ADMIN_EMAIL = "connorkitch10@gmail.com"
 
 # Scopes for Google Sheets & Drive
 SCOPES = [
@@ -12,8 +13,10 @@ SCOPES = [
 
 
 def get_gspread_client():
-    # Authenticate using local token from gspread (OAuth flow)
-    return gspread.oauth()
+    return gspread.oauth(
+        credentials_filename="config/credentials.json",
+        authorized_user_filename="config/token.json"
+    )
 
 
 def get_drive_service():
@@ -42,7 +45,8 @@ def ensure_fitsync_folder(drive_service, folder_name="FitSync Sheets"):
     return folder["id"]
 
 
-def create_sheet_in_folder(gc, drive_service, username, folder_id):
+# create and share sheet if one does not exist
+def ensure_sheet_in_folder(gc, drive_service, username, user_email, folder_id):
     sheet_name = f"{username} Fitness Log"
     print(f"Searching for sheet named: {sheet_name}")
 
@@ -60,6 +64,7 @@ def create_sheet_in_folder(gc, drive_service, username, folder_id):
         sheet_id = existing_files[0]["id"]
         sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}"
         print(f"Sheet already exists for {username}: {sheet_url}")
+        
         return sheet_id, sheet_url
 
     # create new sheet
@@ -73,7 +78,9 @@ def create_sheet_in_folder(gc, drive_service, username, folder_id):
         fields="id, parents"
     ).execute()
 
-    print(f"Created and organized sheet for {username}")
+    share_sheet_with_user(drive_service, sheet_id, user_email, ADMIN_EMAIL)
+    print(f"Created and shared sheet for {username}")
+
     return sheet_id, sheet.url
 
 

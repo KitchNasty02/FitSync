@@ -1,4 +1,4 @@
-from utils.encryption import generate_key, load_key, encrypt_password
+from utils.encryption import load_key, encrypt_password
 import json
 import os
 

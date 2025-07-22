@@ -3,11 +3,15 @@ from datetime import datetime, timedelta
 from utils.encryption import decrypt_password, load_key
 
 def get_garmin_client(email, encrypted_pw):
-    key = load_key()
-    decrypted_pw = decrypt_password(encrypted_pw, key)
-    client = Garmin(email, decrypted_pw)
-    client.login()
-    return client
+    try:
+        key = load_key()
+        decrypted_pw = decrypt_password(encrypted_pw, key)
+        client = Garmin(email, decrypted_pw)
+        client.login()
+        return client
+    except:
+        print(f"Error when logging into client: {email}")
+        return None
 
 
 def fetch_workouts(client, days=30):
@@ -24,7 +28,7 @@ def fetch_workouts(client, days=30):
 
 
 
-def fetch_all_workouts(client, max_activities=500):
+def fetch_all_workouts(client, max_activities=1000):
     
     workouts = []
     start = 0
