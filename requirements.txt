@@ -1,5 +1,6 @@
 cryptography
 garminconnect
 gspread
+gspread-formatting
 oauth2client
 google-api-python-client
