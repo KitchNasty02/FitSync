@@ -1,5 +1,6 @@
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 import gspread
 import os
 
@@ -25,6 +26,15 @@ def get_drive_service():
         raise FileNotFoundError("Token file missing. Run OAuth to authorize first.")
 
     creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+
+    # refresh token if token is expired
+    if not creds.valid:
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # save the refreshed token back to disk
+            with open(token_path, "w") as token_file:
+                token_file.write(creds.to_json())
+
     return build("drive", "v3", credentials=creds)
 
 
@@ -47,7 +57,7 @@ def ensure_fitsync_folder(drive_service, folder_name="FitSync Sheets"):
 
 # create and share sheet if one does not exist
 def ensure_sheet_in_folder(gc, drive_service, username, user_email, folder_id):
-    sheet_name = f"{username} Fitness Log"
+    sheet_name = f"{username} Training Log"
     print(f"Searching for sheet named: {sheet_name}")
 
     # check if sheet already exists
