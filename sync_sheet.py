@@ -8,8 +8,10 @@ def update_header(sheet):
     # Add update for weekly mileage graphs and stuff
     # would shift the frozen rows down
 
+
     headers = ["", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
     sheet.update("A1", [headers])
+    sheet.format("B1:H1", {"horizontalAlignment": "CENTER"})
     set_frozen(sheet, rows=1)
 
 
@@ -63,13 +65,14 @@ def sync_sheet(sheet, workout_data):
         start_row = insert_index
 
         for i, workout in enumerate(workouts):
+            # TODO: update this based on how the garmin data is set up (not the testing data)
             row = [
                 "",  # Column A blank
-                date.isoformat() if i == 0 else "",  # Merge-style visual
-                workout.get("name", ""),
+                date.strftime('%m/%d') if i == 0 else "",  # Merge-style visual
                 workout.get("type", ""),
-                workout.get("duration", ""),
                 workout.get("distance", ""),
+                workout.get("duration", ""),
+                workout.get("average_hr", ""),
                 workout.get("notes", "")
             ]
             sheet.insert_row(row, index=insert_index)
@@ -85,7 +88,10 @@ def sync_sheet(sheet, workout_data):
         # Merge date cells across grouped rows
         if len(workouts) > 1:
             sheet.merge_cells(f"B{start_row}:B{insert_index - 1}")
+            sheet.format(f"B{start_row}", {"verticalAlignment": "MIDDLE"})
 
+    # center text
+    sheet.format("B:G", {"horizontalAlignment": "CENTER"})
 
     print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts.")
 

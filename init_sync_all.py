@@ -39,6 +39,7 @@ def init_sync_all():
 
             workouts = fetch_all_workouts(client)
             print(f"Fetched {len(workouts)} workouts for {username}")
+            print(workouts)
 
             # TODO: push workout data to google sheet
 
