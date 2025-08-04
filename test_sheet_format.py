@@ -15,32 +15,92 @@ def load_accounts(path="config/accounts.json"):
         
 import datetime
 test_data = [
+    # August Activities
     {
-        'date': datetime.date(2025, 8, 1),
-        'activity': 'Run',
-        'distance': 5.0,
-        'time': 30,
-        'hr': 140,
-        'rpe': 6,
-        'description': 'Morning tempo run'
+        "activityId": 1012345678,
+        "activityName": "Run",
+        "startTimeLocal": "2025-08-01 06:30:00",
+        "startTimeGMT": "2025-08-01 12:30:00",
+        "duration": 1800.0,
+        "distance": 5000.0,
+        "averageHR": 140,
+        "rpe": 6,
+        "description": "Morning tempo run",
+        "sportType": {"typeId": 1, "typeKey": "running"}
     },
     {
-        'date': datetime.date(2025, 8, 1),
-        'activity': 'Swim',
-        'distance': 1.2,
-        'time': 40,
-        'hr': 130,
-        'rpe': 5,
-        'description': 'Pool intervals'
+        "activityId": 1012345679,
+        "activityName": "Swim",
+        "startTimeLocal": "2025-08-01 17:00:00",
+        "startTimeGMT": "2025-08-01 23:00:00",
+        "duration": 2400.0,
+        "distance": 1200.0,
+        "averageHR": 130,
+        "rpe": 5,
+        "description": "Pool intervals",
+        "sportType": {"typeId": 2, "typeKey": "swimming"}
     },
     {
-        'date': datetime.date(2025, 7, 31),
-        'activity': 'Bike',
-        'distance': 20.0,
-        'time': 60,
-        'hr': 125,
-        'rpe': 4,
-        'description': 'Evening ride'
+        "activityId": 1012345681,
+        "activityName": "Strength",
+        "startTimeLocal": "2025-08-03 08:00:00",
+        "startTimeGMT": "2025-08-03 14:00:00",
+        "duration": 3600.0,
+        "distance": 0.0,
+        "averageHR": 120,
+        "rpe": 7,
+        "description": "Full body lifting session",
+        "sportType": {"typeId": 4, "typeKey": "strength_training"}
+    },
+    {
+        "activityId": 1012345682,
+        "activityName": "Run",
+        "startTimeLocal": "2025-08-04 07:00:00",
+        "startTimeGMT": "2025-08-04 13:00:00",
+        "duration": 1500.0,
+        "distance": 4000.0,
+        "averageHR": 135,
+        "rpe": 5,
+        "description": "Recovery run",
+        "sportType": {"typeId": 1, "typeKey": "running"}
+    },
+
+    # July Activities
+    {
+        "activityId": 1012345680,
+        "activityName": "Bike",
+        "startTimeLocal": "2025-07-31 18:00:00",
+        "startTimeGMT": "2025-08-01 00:00:00",
+        "duration": 3600.0,
+        "distance": 20000.0,
+        "averageHR": 125,
+        "rpe": 4,
+        "description": "Evening ride",
+        "sportType": {"typeId": 3, "typeKey": "cycling"}
+    },
+    {
+        "activityId": 1012345683,
+        "activityName": "Swim",
+        "startTimeLocal": "2025-07-29 07:30:00",
+        "startTimeGMT": "2025-07-29 13:30:00",
+        "duration": 1800.0,
+        "distance": 1000.0,
+        "averageHR": 128,
+        "rpe": 5,
+        "description": "Easy morning swim",
+        "sportType": {"typeId": 2, "typeKey": "swimming"}
+    },
+    {
+        "activityId": 1012345684,
+        "activityName": "Bike",
+        "startTimeLocal": "2025-07-27 09:00:00",
+        "startTimeGMT": "2025-07-27 15:00:00",
+        "duration": 5400.0,
+        "distance": 25000.0,
+        "averageHR": 132,
+        "rpe": 6,
+        "description": "Weekend long ride",
+        "sportType": {"typeId": 3, "typeKey": "cycling"}
     }
 ]
 
