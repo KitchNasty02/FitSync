@@ -3,6 +3,10 @@ from gspread_formatting import *
 from gspread_formatting import TextFormat, CellFormat, format_cell_range
 from collections import defaultdict
 
+# colors
+MONTH_COLOR = (207, 226, 243)
+HEADERS_COLOR = (159, 197, 232)
+
 
 def update_header(sheet):
     # Add update for weekly mileage graphs and stuff
@@ -11,7 +15,14 @@ def update_header(sheet):
 
     headers = ["", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
     sheet.update("A1", [headers])
-    sheet.format("B1:H1", {"horizontalAlignment": "CENTER"})
+    sheet.format("A1:H1", {
+        "horizontalAlignment": "CENTER", 
+        "backgroundColor": rgb_to_normalized(HEADERS_COLOR),
+        "textFormat": {
+            "fontSize": 11,
+            "bold": True,
+            "fontFamily": "Times New Roman"}
+        })
     set_frozen(sheet, rows=1)
 
 
@@ -26,7 +37,7 @@ def sync_sheet(sheet, workout_data):
     # only get workout with newer dates
     unsynced = [
         w for w in workout_data
-        if not latest_date or w["date"].isoformat() > latest_date
+        if not latest_date or w["startTimeLocal"].isoformat() > latest_date
     ]
 
     if not unsynced:
@@ -36,7 +47,7 @@ def sync_sheet(sheet, workout_data):
     
     daily_groups = defaultdict(list)
     for w in unsynced:
-        daily_groups[w["date"]].append(w)
+        daily_groups[w["startTimeLocal"]].append(w)
 
     # insert new row at top after header
     insert_index = 2
@@ -52,7 +63,7 @@ def sync_sheet(sheet, workout_data):
 
             # Apply formatting: bold, left-aligned, gray fill
             sheet.format(f"A{insert_index}:G{insert_index}", {
-                "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9},
+                "backgroundColor": rgb_to_normalized(MONTH_COLOR),
                 "horizontalAlignment": "LEFT",
                 "textFormat": {"fontSize": 10, "bold": True}
             })
@@ -67,14 +78,15 @@ def sync_sheet(sheet, workout_data):
         for i, workout in enumerate(workouts):
             # TODO: update this based on how the garmin data is set up (not the testing data)
             row = [
-                "",  # Column A blank
-                date.strftime('%m/%d') if i == 0 else "",  # Merge-style visual
-                workout.get("type", ""),
-                workout.get("distance", ""),
-                workout.get("duration", ""),
-                workout.get("average_hr", ""),
-                workout.get("notes", "")
+                "",
+                date.strftime('%m/%d') if i == 0 else "",  
+                workout.get("sportType", {}).get("typeKey", "").title(), 
+                round(workout.get("distance", 0) / 1609.34, 2), 
+                round(workout.get("duration", 0) / 60), 
+                workout.get("averageHR", ""),
+                workout.get("description", "")
             ]
+
             sheet.insert_row(row, index=insert_index)
 
             # Format newly inserted row
@@ -98,7 +110,12 @@ def sync_sheet(sheet, workout_data):
 
 
 
-
+def rgb_to_normalized(rgb):
+    return {
+        "red": rgb[0] / 255,
+        "green": rgb[1] / 255,
+        "blue": rgb[2] / 255
+    }
 
 
 
