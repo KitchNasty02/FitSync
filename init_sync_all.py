@@ -5,6 +5,7 @@ from utils.drive_setup import (
     ensure_fitsync_folder,
     ensure_sheet_in_folder
 )
+from sync_sheet import sync_sheet, update_header
 import json
 
 
@@ -39,9 +40,17 @@ def init_sync_all():
 
             workouts = fetch_all_workouts(client)
             print(f"Fetched {len(workouts)} workouts for {username}")
-            print(workouts)
 
-            # TODO: push workout data to google sheet
+            # Access sheet
+            sheet, sheet_url = ensure_sheet_in_folder(gc, drive_service, name, data["google_email"], folder_id)
+
+            spreadsheet = gc.open_by_url(sheet_url)
+            sheet = spreadsheet.sheet1  # or use .worksheet("Sheet1") if it's named
+
+            update_header(sheet)
+            sync_sheet(sheet, workouts)
+
+            print(f"Sheet formatted successfully for {name}!")
 
 
         except Exception as e:

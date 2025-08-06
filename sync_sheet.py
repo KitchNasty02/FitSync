@@ -22,8 +22,8 @@ def safe_request(func, *args, max_sleep=60, **kwargs):
 MONTH_COLOR = (207, 226, 243)
 HEADERS_COLOR = (159, 197, 232)
 ROW_COLORS = [
-    {"red": 0.98, "green": 0.98, "blue": 0.98},  # light gray
-    {"red": 1.0, "green": 1.0, "blue": 1.0}      # white
+    {"red": 0.95, "green": 0.95, "blue": 0.95},  # medium gray
+    {"red": 1.0,  "green": 1.0,  "blue": 1.0}    # white
 ]
 
 # convert to better labels in sheet
@@ -67,7 +67,7 @@ def sync_sheet(sheet, workout_data):
     # only get workout with newer dates
     unsynced = [
         w for w in workout_data
-        if not latest_date or w["startTimeLocal"].isoformat() > latest_date
+        if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date
     ]
 
     if not unsynced:
@@ -101,9 +101,10 @@ def sync_sheet(sheet, workout_data):
 
         workouts = daily_groups[date]
         start_row = insert_index
+        group_color = ROW_COLORS[color_index]
 
         for i, workout in enumerate(workouts):
-            insert_row(sheet, workout, date, insert_index, i == 0, row_color=ROW_COLORS[color_index])
+            insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
             insert_index += 1
 
         # Merge date cells across grouped rows
@@ -116,9 +117,8 @@ def sync_sheet(sheet, workout_data):
     print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts.")
 
 
-def insert_month_divider(sheet, date, insert_index, max_sleep = 60):
+def insert_month_divider(sheet, date, insert_index):
     divider_text = date.strftime('%B %Y')
-    sleep_time = 1
     
     safe_request(sheet.insert_row, [divider_text], index=insert_index)
     safe_request(sheet.merge_cells, f"A{insert_index}:H{insert_index}")
@@ -130,9 +130,9 @@ def insert_month_divider(sheet, date, insert_index, max_sleep = 60):
     })
 
 
-def insert_row(sheet, workout, date, insert_index, is_first_row, row_color, max_sleep=60):
+def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
     
-    raw_type = workout.get("sportType", {}).get("typeKey", "")
+    raw_type = workout.get("activityType", {}).get("typeKey", "")
     activity_label = TYPEKEY_MAP.get(raw_type, raw_type.title())
 
     row = [
@@ -140,13 +140,12 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color, max_
         date.strftime('%m/%d') if is_first_row else "",  
         activity_label, 
         round(workout.get("distance", 0) / 1609.34, 2), 
-        round(workout.get("duration", 0) / 60), 
+        sec_to_hms(workout.get("duration", 0)), 
         workout.get("averageHR", ""),
         "",
         workout.get("description", "")
     ]
 
-    sleep_time = 1
     safe_request(sheet.insert_row, row, index=insert_index)
 
     # Format new row
@@ -167,6 +166,16 @@ def rgb_to_normalized(rgb):
         "blue": rgb[2] / 255
     }
 
+def sec_to_hms(seconds):
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    if h <= 0:
+        return f"{int(m):02}:{int(s):02}"
+    elif h <= 0 and m <= 0:
+        return f"{int(s):02}"
+    else:
+        return f"{int(h):01}:{int(m):02}:{int(s):02}"
 
 
 
