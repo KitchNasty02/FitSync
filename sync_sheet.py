@@ -61,14 +61,16 @@ def update_header(sheet):
 
 def sync_sheet(sheet, workout_data):
 
-    top_row = sheet.row_values(2)
+    top_row = sheet.row_values(3)
     latest_date = top_row[1] if len(top_row) > 1 else None
 
     # only get workout with newer dates
-    unsynced = [
-        w for w in workout_data
-        if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date
-    ]
+    unsynced = []
+    for w in workout_data:
+        if isinstance(w["startTimeLocal"], str):
+            w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
+        if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date:
+            unsynced.append(w)
 
     if not unsynced:
         print("Sheet is already up to date.")

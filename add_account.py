@@ -17,7 +17,8 @@ def save_account(name, username, encrypted_pw, google_email, path="config/accoun
         "name": name,
         "username": username,
         "password": encrypted_pw,
-        "google_email": google_email
+        "google_email": google_email,
+        "season_ranges": {}
     }
 
     # save

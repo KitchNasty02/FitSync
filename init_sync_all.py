@@ -50,9 +50,6 @@ def init_sync_all():
             update_header(sheet)
             sync_sheet(sheet, workouts)
 
-            print(f"Sheet formatted successfully for {name}!")
-
-
         except Exception as e:
             print(f"Error fetching {name}'s data: {e}")
 
