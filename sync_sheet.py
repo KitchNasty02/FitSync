@@ -150,7 +150,7 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
 
     safe_request(sheet.insert_row, row, index=insert_index)
 
-    # Format new row
+    # format new row
     safe_request(sheet.format, f"A{insert_index}:H{insert_index}", {
         "backgroundColor": row_color,
         "horizontalAlignment": "CENTER",
