@@ -1,3 +1,4 @@
 config/key.key
 config/credentials.json
 config/token.json
+config/accounts.json
