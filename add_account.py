@@ -2,6 +2,20 @@ from utils.encryption import load_key, encrypt_password
 import json
 import os
 
+# loop to get tab name and start date
+def get_season_ranges():
+    season_ranges = {}
+
+    while user_input != 'n':
+        season_name = input("Enter season name: ")
+        start_day = input("Enter start day: ")
+        start_month = input("Enter start month: ")
+        start_year = input("Enter start year: ")
+
+        tab_title = f"{season_name} {start_year}"
+        start_date = f""
+
+
 
 # saves username and encrypted password to accounts.json
 def save_account(name, username, encrypted_pw, google_email, season_ranges, path="config/accounts.json"):
@@ -12,17 +26,18 @@ def save_account(name, username, encrypted_pw, google_email, season_ranges, path
     else:
         accounts = {}
 
-    # set season ranges
-    if season_ranges == "year":
-        account_ranges = {}
-    else:
+    # # set season ranges
+    # if season_ranges == "year":
+    #     account_ranges = {}
+    # else:
         # "season_ranges": {
         #     "XC": "08-15",
         #     "Indoor Track": "11-21",
         #     "Outdoor Track": "03-01",
         #     "Summer": "06-01"
         # } # use this to make the tabs. Maybe add year since date will change
-        pass
+        # account_ranges = season_ranges
+        # pass
 
     # add new user
     accounts[name] = {
@@ -44,12 +59,10 @@ password = input("Enter Password: ")
 google_email = input("Enter Google Email: ")
 custom_tabs = input("Do you want custom tabs? (y/n -- default is each year)")
 
-# check and get tab dates
 if custom_tabs == 'y':
-    # loop to get tab name and start date
-    pass
+    season_ranges = get_season_ranges()
 else:
-    season_ranges = "year"
+    season_ranges = None    # defaults to each year
 
 
 
