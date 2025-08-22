@@ -1,5 +1,5 @@
 from utils.encryption import load_key, encrypt_password
-import datetime
+from datetime import datetime
 import json
 import os
 
@@ -62,7 +62,7 @@ def save_account(name, username, encrypted_pw, google_email, season_ranges, path
 
 name = input("Enter Persons Name: ")
 username = input("Enter GarminConnect Email: ")
-password = input("Enter Password: ")
+password = input("Enter CarminConnect Password: ")
 google_email = input("Enter Google Email: ")
 custom_tabs = input("Do you want custom tabs? (y/n -- default is each year)")
 
@@ -72,8 +72,19 @@ else:
     season_ranges = None    # defaults to each year
 
 
-
 key = load_key()
 encrypted_password = encrypt_password(password, key)
+
+
+account_preview = {
+    "name": name,
+    "username": username,
+    "google_email": google_email,
+    "season_ranges": season_ranges if season_ranges else "Default: yearly tabs"
+}
+
+print(json.dumps(account_preview, indent=4))
+input("Save this account info?")
+
 save_account(name, username, encrypted_password, google_email, season_ranges)
 print("Account Saved.")

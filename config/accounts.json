@@ -2,8 +2,12 @@
     "Connor Kitchin": {
         "name": "Connor Kitchin",
         "username": "connorkitch10@gmail.com",
-        "password": "gAAAAABodxcojjPUzsVRLQXRt3hDHkOcMX9ii9_7kq0lIgcz1Y28QLCxTsuJE7IDHsQJvSZYuaMv4o0yQT6w_2uRZfdhoTpYpQ==",
-        "google_email": "connorkitch10@gmail.com"
+        "password": "gAAAAABoqLXpAM8dm8WSsMvE5W9wlpOWWUlqRpwLv3xZdMm8In-EJuN_01lvXn-eWVRPtCSvyBT4z5MMi09z3N4GLyIWFNSdWw==",
+        "google_email": "connorkitch10@gmail.com",
+        "season_ranges": {
+            "XC 2025": "2025-01-08",
+            "Winter Offseason 2025": "2025-12-01"
+        }
     },
     "Josh Kitchin": {
         "name": "Josh Kitchin",
