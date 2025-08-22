@@ -1,4 +1,5 @@
 from utils.encryption import load_key, encrypt_password
+import datetime
 import json
 import os
 
@@ -6,14 +7,33 @@ import os
 def get_season_ranges():
     season_ranges = {}
 
-    while user_input != 'n':
+    while True:
         season_name = input("Enter season name: ")
-        start_day = input("Enter start day: ")
-        start_month = input("Enter start month: ")
-        start_year = input("Enter start year: ")
+        start_day = input("Enter start day (DD): ")
+        start_month = input("Enter start month (MM): ")
+        start_year = input("Enter start year (YYYY): ")
+
+        try:
+            start_date_obj = datetime.strptime(f"{start_year}-{start_month}-{start_day}", "%Y-%m-%d")
+            start_date = start_date_obj.strftime("%Y-%m-%d")
+        except ValueError:
+            print("Invalid date, try again.")
+            continue
 
         tab_title = f"{season_name} {start_year}"
-        start_date = f""
+
+        if tab_title in season_ranges:
+            print(f"Tab {tab_title} already exists, try a different one.")
+            continue
+
+        season_ranges[tab_title] = start_date
+
+        user_input = input("Add another season? (y/n): ").lower()
+        if user_input == 'n':
+            break
+
+    return season_ranges
+
 
 
 
@@ -25,19 +45,6 @@ def save_account(name, username, encrypted_pw, google_email, season_ranges, path
             accounts = json.load(file)
     else:
         accounts = {}
-
-    # # set season ranges
-    # if season_ranges == "year":
-    #     account_ranges = {}
-    # else:
-        # "season_ranges": {
-        #     "XC": "08-15",
-        #     "Indoor Track": "11-21",
-        #     "Outdoor Track": "03-01",
-        #     "Summer": "06-01"
-        # } # use this to make the tabs. Maybe add year since date will change
-        # account_ranges = season_ranges
-        # pass
 
     # add new user
     accounts[name] = {
