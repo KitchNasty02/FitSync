@@ -59,37 +59,59 @@ def update_header(sheet):
     safe_request(set_frozen, sheet, rows=1)
 
 
-def sync_sheet(sheet, workout_data):
 
-    top_row = sheet.row_values(3)
-    latest_date = top_row[1] if len(top_row) > 1 else None
+def sync_sheet(spreadsheet, workout_data, season_ranges=None):
+    tab_map = {}
 
-    # only get workout with newer dates
-    unsynced = []
+    def get_tab_name(workout_date, season_ranges=None):
+        if season_ranges:
+            # sort seasons
+            sorted_seasons = sorted(season_ranges.items(), key=lambda x: x[1], reverse=True)
+            for tab_title, start_str in sorted_seasons:
+                start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+                if workout_date >= start_date:
+                    return tab_title
+            return "uncategorized" # if not in a range
+        else:
+            # default to year if no custom tab range
+            return str(workout_date.year)
+    
+
+    # group workouts by tab
+    tab_groups = defaultdict(lambda: defaultdict(list)) # {tab_title: {date: [workouts]}}
+
     for w in workout_data:
         if isinstance(w["startTimeLocal"], str):
             w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
-        if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date:
-            unsynced.append(w)
-
-    if not unsynced:
-        print("Sheet is already up to date.")
-        return
-    
-    
-    daily_groups = defaultdict(list)
-    for w in unsynced:
-        if isinstance(w["startTimeLocal"], str):
-            w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
-
+        
         workout_date = w["startTimeLocal"].date()
-        daily_groups[workout_date].append(w)
+        tab_title = get_tab_name(workout_date)
+        tab_groups[tab_title][workout_date].append(w)
+    
+    for tab_title, daily_groups in tab_groups.items():
+        # get or create tab
+        try:
+            sheet = spreadsheet.worksheet(tab_title)
+        except:
+            # TODO: update these to set up right number of rows/cols
+            sheet = spreadsheet.add_worksheet(title=tab_title, rows=10, cols=8)
+            update_header(sheet, season_label=tab_title)
 
-    # insert new row at top after header
-    insert_index = 2
-    last_month = None
+        top_row = sheet.row_values(3)
+        latest_date = top_row[1] if len(top_row) > 1 else None
 
-    color_index = 0
+        unsynced_dates = [
+            date for date in daily_groups
+            if not latest_date or date.strftime("%m/%d") > latest_date
+        ]
+        if not unsynced_dates:
+            print(f"Tab '{tab_title}' is already up to date.")
+            continue
+
+        # insert_index = 2
+    # last_month = None
+
+    # color_index = 0
 
     for date in sorted(daily_groups.keys(), reverse=True):
 
@@ -116,7 +138,68 @@ def sync_sheet(sheet, workout_data):
 
         color_index = 1 - color_index
 
-    print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts.")
+    print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
+
+            
+
+
+
+    # top_row = sheet.row_values(3)
+    # latest_date = top_row[1] if len(top_row) > 1 else None
+
+    # only get workout with newer dates
+    # unsynced = []
+    # for w in workout_data:
+    #     if isinstance(w["startTimeLocal"], str):
+    #         w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
+    #     if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date:
+    #         unsynced.append(w)
+
+    # if not unsynced:
+    #     print("Sheet is already up to date.")
+    #     return
+    
+    
+    # daily_groups = defaultdict(list)
+    # for w in unsynced:
+    #     if isinstance(w["startTimeLocal"], str):
+    #         w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
+
+    #     workout_date = w["startTimeLocal"].date()
+    #     daily_groups[workout_date].append(w)
+
+    # # insert new row at top after header
+    # insert_index = 2
+    # last_month = None
+
+    # color_index = 0
+
+    # for date in sorted(daily_groups.keys(), reverse=True):
+
+    #     # check month change
+    #     current_month = date.strftime('%Y-%m')
+    #     if current_month != last_month:
+    #         insert_month_divider(sheet, date, insert_index)
+    #         insert_index += 1
+    #         last_month = current_month
+
+
+    #     workouts = daily_groups[date]
+    #     start_row = insert_index
+    #     group_color = ROW_COLORS[color_index]
+
+    #     for i, workout in enumerate(workouts):
+    #         insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
+    #         insert_index += 1
+
+    #     # Merge date cells across grouped rows
+    #     if len(workouts) > 1:
+    #         safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
+    #         safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
+
+    #     color_index = 1 - color_index
+
+    # print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts.")
 
 
 def insert_month_divider(sheet, date, insert_index):
