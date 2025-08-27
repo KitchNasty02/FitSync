@@ -1,5 +1,4 @@
-from gspread_formatting import set_frozen
-from gspread.exceptions import APIError
+from gspread_formatting import set_frozen, set_column_width
 from collections import defaultdict
 from datetime import datetime
 import time
@@ -43,7 +42,7 @@ TYPEKEY_MAP = {
 
 
 def update_header(sheet):
-    # Add update for weekly mileage graphs and stuff
+    # TODO: Add update for weekly mileage graphs and stuff
     # would shift the frozen rows down
 
     headers = ["", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
@@ -75,6 +74,19 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
         else:
             # default to year if no custom tab range
             return str(workout_date.year)
+        
+    def col_index_to_letter(index):
+        # Convert 1-based column index to A1 notation letter
+        result = ""
+        while index > 0:
+            index, remainder = divmod(index - 1, 26)
+            result = chr(65 + remainder) + result
+        return result
+        
+    def set_column_widths(sheet):
+        widths = [20, 100, 80, 80, 80, 80, 60, 200]
+        for i, w in enumerate(widths, start=1):
+            set_column_width(sheet, col_index_to_letter(i), w)
     
 
     # group workouts by tab
@@ -85,17 +97,21 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
         
         workout_date = w["startTimeLocal"].date()
-        tab_title = get_tab_name(workout_date)
+        tab_title = get_tab_name(workout_date, season_ranges)
         tab_groups[tab_title][workout_date].append(w)
     
     for tab_title, daily_groups in tab_groups.items():
         # get or create tab
-        try:
-            sheet = spreadsheet.worksheet(tab_title)
-        except:
-            # TODO: update these to set up right number of rows/cols
-            sheet = spreadsheet.add_worksheet(title=tab_title, rows=10, cols=8)
-            update_header(sheet, season_label=tab_title)
+        if tab_title not in tab_map:
+            try:
+                tab_map[tab_title] = spreadsheet.worksheet(tab_title)
+            except:
+                # TODO: update these to set up right number of rows/cols
+                tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=8)
+                update_header(tab_map[tab_title])
+                set_column_widths(tab_map[tab_title])
+
+        sheet = tab_map[tab_title]
 
         top_row = sheet.row_values(3)
         latest_date = top_row[1] if len(top_row) > 1 else None
@@ -108,98 +124,39 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             print(f"Tab '{tab_title}' is already up to date.")
             continue
 
-        # insert_index = 2
-    # last_month = None
 
-    # color_index = 0
+        # insert workouts
 
-    for date in sorted(daily_groups.keys(), reverse=True):
+        insert_index = 2
+        last_month = None
+        color_index = 0
 
-        # check month change
-        current_month = date.strftime('%Y-%m')
-        if current_month != last_month:
-            insert_month_divider(sheet, date, insert_index)
-            insert_index += 1
-            last_month = current_month
-
-
-        workouts = daily_groups[date]
-        start_row = insert_index
-        group_color = ROW_COLORS[color_index]
-
-        for i, workout in enumerate(workouts):
-            insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
-            insert_index += 1
-
-        # Merge date cells across grouped rows
-        if len(workouts) > 1:
-            safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
-            safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
-
-        color_index = 1 - color_index
-
-    print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
-
-            
+        for date in sorted(daily_groups.keys(), reverse=True):
+            # check month change
+            current_month = date.strftime('%Y-%m')
+            if current_month != last_month:
+                insert_month_divider(sheet, date, insert_index)
+                insert_index += 1
+                last_month = current_month
 
 
+            workouts = daily_groups[date]
+            start_row = insert_index
+            group_color = ROW_COLORS[color_index]
 
-    # top_row = sheet.row_values(3)
-    # latest_date = top_row[1] if len(top_row) > 1 else None
+            for i, workout in enumerate(workouts):
+                insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
+                insert_index += 1
 
-    # only get workout with newer dates
-    # unsynced = []
-    # for w in workout_data:
-    #     if isinstance(w["startTimeLocal"], str):
-    #         w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
-    #     if not latest_date or w["startTimeLocal"].strftime("%m/%d") > latest_date:
-    #         unsynced.append(w)
+            # Merge date cells across grouped rows
+            if len(workouts) > 1:
+                safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
+                safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
 
-    # if not unsynced:
-    #     print("Sheet is already up to date.")
-    #     return
-    
-    
-    # daily_groups = defaultdict(list)
-    # for w in unsynced:
-    #     if isinstance(w["startTimeLocal"], str):
-    #         w["startTimeLocal"] = datetime.strptime(w["startTimeLocal"], "%Y-%m-%d %H:%M:%S")
+            color_index = 1 - color_index
 
-    #     workout_date = w["startTimeLocal"].date()
-    #     daily_groups[workout_date].append(w)
+        print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
 
-    # # insert new row at top after header
-    # insert_index = 2
-    # last_month = None
-
-    # color_index = 0
-
-    # for date in sorted(daily_groups.keys(), reverse=True):
-
-    #     # check month change
-    #     current_month = date.strftime('%Y-%m')
-    #     if current_month != last_month:
-    #         insert_month_divider(sheet, date, insert_index)
-    #         insert_index += 1
-    #         last_month = current_month
-
-
-    #     workouts = daily_groups[date]
-    #     start_row = insert_index
-    #     group_color = ROW_COLORS[color_index]
-
-    #     for i, workout in enumerate(workouts):
-    #         insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
-    #         insert_index += 1
-
-    #     # Merge date cells across grouped rows
-    #     if len(workouts) > 1:
-    #         safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
-    #         safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
-
-    #     color_index = 1 - color_index
-
-    # print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts.")
 
 
 def insert_month_divider(sheet, date, insert_index):
@@ -213,6 +170,7 @@ def insert_month_divider(sheet, date, insert_index):
         "horizontalAlignment": "LEFT",
         "textFormat": {"fontSize": 10, "bold": True}
     })
+
 
 
 def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):

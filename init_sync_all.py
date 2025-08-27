@@ -28,9 +28,6 @@ def init_sync_all():
     for name, data in accounts.items():
         
         try:
-            # make sure sheet is created for the user
-            ensure_sheet_in_folder(gc, drive_service, name, data["google_email"], folder_id)
-
             username, password = data["username"], data["password"]
             client = get_garmin_client(username, password)
             
@@ -42,13 +39,10 @@ def init_sync_all():
             print(f"Fetched {len(workouts)} workouts for {username}")
 
             # Access sheet
-            sheet, sheet_url = ensure_sheet_in_folder(gc, drive_service, name, data["google_email"], folder_id)
+            _, sheet_url = ensure_sheet_in_folder(gc, drive_service, name, data["google_email"], folder_id)
 
             spreadsheet = gc.open_by_url(sheet_url)
-            sheet = spreadsheet.sheet1  # or use .worksheet("Sheet1") if it's named
-
-            update_header(sheet)
-            sync_sheet(sheet, workouts)
+            sync_sheet(spreadsheet, workouts, season_ranges=data.get("season_ranges"))
 
         except Exception as e:
             print(f"Error fetching {name}'s data: {e}")

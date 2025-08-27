@@ -1,13 +1,17 @@
 import gspread
-from gspread_formatting import *
-from gspread_formatting import TextFormat, CellFormat, format_cell_range
+# from gspread_formatting import *
+from collections import defaultdict
+from gspread_formatting import (
+    format_cell_range, set_frozen, set_column_width, 
+    CellFormat, Color, TextFormat
+)
 
 
 
 
 
 
-def format_sheet(sheet, workout_data):
+def format_sheet(sheet):
     """
     workout_data: list of dicts with keys like
     {
@@ -20,56 +24,54 @@ def format_sheet(sheet, workout_data):
         'description': 'Tempo run'
     }
     """
-    from collections import defaultdict
-    from gspread_formatting import format_cell_range, CellFormat, Color, TextFormat
 
-    reset_sheet(sheet)
+    # reset_sheet(sheet)
     headers = ["", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
     sheet.update("A1", [headers])
     set_frozen(sheet, rows=1)
     
-    row = 2    # start row for data
+    # row = 2    # start row for data
 
     # Sort workouts: most recent month first, then ascending by date
-    workout_data.sort(key=lambda w: w['date'], reverse=False)
+    # workout_data.sort(key=lambda w: w['date'], reverse=False)
 
     # row = 1
-    month_groups = defaultdict(list)
-    for workout in workout_data:
-        month_str = workout['date'].strftime('%B %Y')
-        month_groups[month_str].append(workout)
+    # month_groups = defaultdict(list)
+    # for workout in workout_data:
+    #     month_str = workout['date'].strftime('%B %Y')
+    #     month_groups[month_str].append(workout)
 
-    for month in sorted(month_groups.keys(), reverse=False):
-        # Insert month divider
-        sheet.update(f"A{row}", [[month]])
-        format_cell_range(sheet, f"A{row}:G{row}", CellFormat(
-            backgroundColor=Color(0.85, 0.85, 0.85),
-            textFormat=TextFormat(bold=True)
-        ))
-        row += 1
+    # for month in sorted(month_groups.keys(), reverse=False):
+    #     # Insert month divider
+    #     sheet.update(f"A{row}", [[month]])
+    #     format_cell_range(sheet, f"A{row}:G{row}", CellFormat(
+    #         backgroundColor=Color(0.85, 0.85, 0.85),
+    #         textFormat=TextFormat(bold=True)
+    #     ))
+    #     row += 1
 
-        # Group by date
-        daily_groups = defaultdict(list)
-        for workout in month_groups[month]:
-            daily_groups[workout['date']].append(workout)
+    #     # Group by date
+    #     daily_groups = defaultdict(list)
+    #     for workout in month_groups[month]:
+    #         daily_groups[workout['date']].append(workout)
 
-        for date, activities in sorted(daily_groups.items(), reverse=True):
-            start_row = row
-            for workout in activities:
-                sheet.update(f"A{row}", [[""]])  # Empty first column
-                sheet.update(f"B{row}:H{row}", [[
-                    date.strftime('%Y-%m-%d') if row == start_row else "",  # will be merged
-                    workout['activity'],
-                    workout['distance'],
-                    workout['time'],
-                    workout['hr'],
-                    workout['rpe'],
-                    workout['description']
-                ]])
-                row += 1
+    #     for date, activities in sorted(daily_groups.items(), reverse=True):
+    #         start_row = row
+    #         for workout in activities:
+    #             sheet.update(f"A{row}", [[""]])  # Empty first column
+    #             sheet.update(f"B{row}:H{row}", [[
+    #                 date.strftime('%Y-%m-%d') if row == start_row else "",  # will be merged
+    #                 workout['activity'],
+    #                 workout['distance'],
+    #                 workout['time'],
+    #                 workout['hr'],
+    #                 workout['rpe'],
+    #                 workout['description']
+    #             ]])
+    #             row += 1
 
-            # Merge date column vertically ERROR HERE
-            sheet.merge_cells(f"B{start_row}:B{row - 1}")
+    #         # Merge date column vertically ERROR HERE
+    #         sheet.merge_cells(f"B{start_row}:B{row - 1}")
 
     # Optional: Column widths
     widths = [20, 100, 80, 80, 80, 80, 60, 200]
@@ -137,17 +139,3 @@ def reset_sheet(sheet):
     # 5. Reset frozen panes
     set_frozen(sheet, rows=0, cols=0)
 
-
-
-from gspread_formatting import format_cell_range, CellFormat
-import gspread.utils
-
-def clear_all_formatting(sheet):
-    data = sheet.get_all_values()
-    row_count = len(data)
-    col_count = max((len(row) for row in data), default=0)
-
-    end_cell = gspread.utils.rowcol_to_a1(row_count, col_count)
-    range_str = f"A1:{end_cell}"
-
-    format_cell_range(sheet, range_str, CellFormat())
