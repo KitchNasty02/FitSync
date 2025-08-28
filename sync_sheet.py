@@ -1,4 +1,4 @@
-from gspread_formatting import set_frozen, set_column_width
+from gspread_formatting import set_frozen, set_column_width, set_row_height
 from collections import defaultdict
 from datetime import datetime
 import time
@@ -114,87 +114,75 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
 
         insert_index = 2
 
+        # goes through workouts by date
         for week_index in sorted(week_groups.keys(), reverse=True):
             week_color = WEEK_COLORS[week_index % 2]
             week_data = week_groups[week_index]
 
+            block_start = insert_index
+            week_label_blocks = []
+
             for date in sorted(week_data.keys(), reverse=True):
                 workouts = week_data[date]
-                current_month = date.strftime('%Y-%m')
+                month_key = date.strftime('%Y-%m')
 
-                if current_month not in inserted_months:
+                # Insert month divider if needed
+                if month_key not in inserted_months:
+                    # close previous bock for the week if the month changes
+                    if block_start < insert_index:
+                        week_label_blocks.append((block_start, insert_index - 1))
                     insert_month_divider(sheet, date, insert_index)
-                    inserted_months.add(current_month)
+                    inserted_months.add(month_key)
                     insert_index += 1
+                    block_start = insert_index
 
+                # Insert workouts
                 for i, workout in enumerate(workouts):
                     insert_row(sheet, workout, date, insert_index, i == 0, row_color=week_color)
                     insert_index += 1
 
+                # Merge date cells if multiple workouts in a day
                 if len(workouts) > 1:
                     safe_request(sheet.merge_cells, f"B{insert_index - len(workouts)}:B{insert_index - 1}")
                     safe_request(sheet.format, f"B{insert_index - len(workouts)}", {"verticalAlignment": "MIDDLE"})
 
-            start_row = insert_index
-            
-            # Merge and format vertical week label
-            if insert_index > start_row:
-                safe_request(sheet.update, f"A{start_row}", [[f"Week {week_index + 1}"]])
-                safe_request(sheet.merge_cells, f"A{start_row}:A{insert_index - 1}")
-                safe_request(sheet.format, f"A{start_row}", {
+            # Final block for this week
+            if block_start < insert_index:
+                week_label_blocks.append((block_start, insert_index - 1))
+
+            # Apply vertical week labels per block
+            for block_start, block_end in week_label_blocks:
+
+                print(f"block start: {block_start}, block end: {block_end}")
+
+                safe_request(sheet.update, f"A{block_start}", [[f"W{week_index + 1}"]])
+                if block_end > block_start:
+                    safe_request(sheet.merge_cells, f"A{block_start}:A{block_end}")
+                    print(f"merged cells A{block_start}:A{block_end}")
+
+                safe_request(sheet.format, f"A{block_start}", {
                     "textRotation": {"angle": 90},
                     "horizontalAlignment": "CENTER",
                     "verticalAlignment": "MIDDLE",
                     "textFormat": {"bold": True}
                 })
 
+            print(f"Week {week_index + 1}: blocks={week_label_blocks}")
+
         print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
-
-
-
-        # insert workouts
-
-        # insert_index = 2
-        # last_month = None
-        # color_index = 0
-
-        # for date in sorted(daily_groups.keys(), reverse=True):
-        #     # check month change
-        #     current_month = date.strftime('%Y-%m')
-        #     if current_month != last_month:
-        #         insert_month_divider(sheet, date, insert_index)
-        #         insert_index += 1
-        #         last_month = current_month
-
-
-        #     workouts = daily_groups[date]
-        #     start_row = insert_index
-        #     group_color = ROW_COLORS[color_index]
-
-        #     for i, workout in enumerate(workouts):
-        #         insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
-        #         insert_index += 1
-
-        #     # Merge date cells across grouped rows
-        #     if len(workouts) > 1:
-        #         safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
-        #         safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
-
-        #     color_index = 1 - color_index
-
-        # print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
-
 
 
 def insert_month_divider(sheet, date, insert_index):
     divider_text = date.strftime('%B %Y')
     
     safe_request(sheet.insert_row, [divider_text], index=insert_index)
+    safe_request(set_row_height, sheet, str(insert_index), 30) # set row height
     safe_request(sheet.merge_cells, f"A{insert_index}:H{insert_index}")
 
     safe_request(sheet.format, f"A{insert_index}:G{insert_index}", {
         "backgroundColor": rgb_to_normalized(MONTH_COLOR),
         "horizontalAlignment": "LEFT",
+        "verticalAlignment": "MIDDLE",
         "textFormat": {"fontSize": 10, "bold": True}
     })
 
@@ -219,9 +207,11 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
     safe_request(sheet.insert_row, row, index=insert_index)
 
     # format new row
+    safe_request(set_row_height, sheet, str(insert_index), 30) # set row height
     safe_request(sheet.format, f"A{insert_index}:H{insert_index}", {
         "backgroundColor": row_color,
         "horizontalAlignment": "CENTER",
+        "verticalAlignment": "MIDDLE",
         "textFormat": {"fontSize": 10}
     })
     safe_request(sheet.format, f"H{insert_index}", {"horizontalAlignment": "LEFT"})
