@@ -6,7 +6,7 @@ import time
 
 # ensures the api request do not fail from the rate limit
 def safe_request(func, *args, max_sleep=60, **kwargs):
-    for sleep_time in [1, 2, 4, 8, 16, 32, max_sleep]:
+    for sleep_time in [10, 15, 30, 45, max_sleep]:
         try:
             return func(*args, **kwargs)
         except Exception as e:
