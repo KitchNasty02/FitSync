@@ -20,6 +20,10 @@ def safe_request(func, *args, max_sleep=60, **kwargs):
 # colors
 MONTH_COLOR = (207, 226, 243)
 HEADERS_COLOR = (159, 197, 232)
+WEEK_COLORS = [
+    {"red": 0.90, "green": 0.95, "blue": 1.0},  # light blue
+    {"red": 0.90, "green": 1.0, "blue": 0.90}   # light green
+]
 ROW_COLORS = [
     {"red": 0.95, "green": 0.95, "blue": 0.95},  # medium gray
     {"red": 1.0,  "green": 1.0,  "blue": 1.0}    # white
@@ -62,33 +66,6 @@ def update_header(sheet):
 def sync_sheet(spreadsheet, workout_data, season_ranges=None):
     tab_map = {}
 
-    def get_tab_name(workout_date, season_ranges=None):
-        if season_ranges:
-            # sort seasons
-            sorted_seasons = sorted(season_ranges.items(), key=lambda x: x[1], reverse=True)
-            for tab_title, start_str in sorted_seasons:
-                start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
-                if workout_date >= start_date:
-                    return tab_title
-            return "uncategorized" # if not in a range
-        else:
-            # default to year if no custom tab range
-            return str(workout_date.year)
-        
-    def col_index_to_letter(index):
-        # Convert 1-based column index to A1 notation letter
-        result = ""
-        while index > 0:
-            index, remainder = divmod(index - 1, 26)
-            result = chr(65 + remainder) + result
-        return result
-        
-    def set_column_widths(sheet):
-        widths = [20, 100, 80, 80, 80, 80, 60, 200]
-        for i, w in enumerate(widths, start=1):
-            set_column_width(sheet, col_index_to_letter(i), w)
-    
-
     # group workouts by tab
     tab_groups = defaultdict(lambda: defaultdict(list)) # {tab_title: {date: [workouts]}}
 
@@ -118,44 +95,94 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
 
         unsynced_dates = [
             date for date in daily_groups
+            # get dates that are after the last synced one (the top on in row 3 of sheet)
             if not latest_date or date.strftime("%m/%d") > latest_date
         ]
         if not unsynced_dates:
             print(f"Tab '{tab_title}' is already up to date.")
             continue
+        
+        # first date in tab -- MAY NEED TO UPDATE TO MAKE IT THE FIRST DATE IN 
+        anchor_date = min(unsynced_dates)
+        inserted_months = set()
+
+        # Group workouts by week
+        week_groups = defaultdict(lambda: defaultdict(list))
+        for date in unsynced_dates:
+            week_index = get_week_index(date, anchor_date)
+            week_groups[week_index][date] = daily_groups[date]
+
+        insert_index = 2
+
+        for week_index in sorted(week_groups.keys(), reverse=True):
+            week_color = WEEK_COLORS[week_index % 2]
+            week_data = week_groups[week_index]
+
+            for date in sorted(week_data.keys(), reverse=True):
+                workouts = week_data[date]
+                current_month = date.strftime('%Y-%m')
+
+                if current_month not in inserted_months:
+                    insert_month_divider(sheet, date, insert_index)
+                    inserted_months.add(current_month)
+                    insert_index += 1
+
+                for i, workout in enumerate(workouts):
+                    insert_row(sheet, workout, date, insert_index, i == 0, row_color=week_color)
+                    insert_index += 1
+
+                if len(workouts) > 1:
+                    safe_request(sheet.merge_cells, f"B{insert_index - len(workouts)}:B{insert_index - 1}")
+                    safe_request(sheet.format, f"B{insert_index - len(workouts)}", {"verticalAlignment": "MIDDLE"})
+
+            start_row = insert_index
+            
+            # Merge and format vertical week label
+            if insert_index > start_row:
+                safe_request(sheet.update, f"A{start_row}", [[f"Week {week_index + 1}"]])
+                safe_request(sheet.merge_cells, f"A{start_row}:A{insert_index - 1}")
+                safe_request(sheet.format, f"A{start_row}", {
+                    "textRotation": {"angle": 90},
+                    "horizontalAlignment": "CENTER",
+                    "verticalAlignment": "MIDDLE",
+                    "textFormat": {"bold": True}
+                })
+
+        print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
+
 
 
         # insert workouts
 
-        insert_index = 2
-        last_month = None
-        color_index = 0
+        # insert_index = 2
+        # last_month = None
+        # color_index = 0
 
-        for date in sorted(daily_groups.keys(), reverse=True):
-            # check month change
-            current_month = date.strftime('%Y-%m')
-            if current_month != last_month:
-                insert_month_divider(sheet, date, insert_index)
-                insert_index += 1
-                last_month = current_month
+        # for date in sorted(daily_groups.keys(), reverse=True):
+        #     # check month change
+        #     current_month = date.strftime('%Y-%m')
+        #     if current_month != last_month:
+        #         insert_month_divider(sheet, date, insert_index)
+        #         insert_index += 1
+        #         last_month = current_month
 
 
-            workouts = daily_groups[date]
-            start_row = insert_index
-            group_color = ROW_COLORS[color_index]
+        #     workouts = daily_groups[date]
+        #     start_row = insert_index
+        #     group_color = ROW_COLORS[color_index]
 
-            for i, workout in enumerate(workouts):
-                insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
-                insert_index += 1
+        #     for i, workout in enumerate(workouts):
+        #         insert_row(sheet, workout, date, insert_index, i == 0, row_color=group_color)
+        #         insert_index += 1
 
-            # Merge date cells across grouped rows
-            if len(workouts) > 1:
-                safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
-                safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
+        #     # Merge date cells across grouped rows
+        #     if len(workouts) > 1:
+        #         safe_request(sheet.merge_cells, f"B{start_row}:B{insert_index - 1}")
+        #         safe_request(sheet.format, f"B{start_row}", {"verticalAlignment": "MIDDLE"})
 
-            color_index = 1 - color_index
+        #     color_index = 1 - color_index
 
-        print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
+        # print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
 
 
 
@@ -201,6 +228,40 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
 
 
 
+def get_tab_name(workout_date, season_ranges=None):
+        if season_ranges:
+            # sort seasons
+            sorted_seasons = sorted(season_ranges.items(), key=lambda x: x[1], reverse=True)
+            for tab_title, start_str in sorted_seasons:
+                start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+                if workout_date >= start_date:
+                    return tab_title
+            return "uncategorized" # if not in a range
+        else:
+            # default to year if no custom tab range
+            return str(workout_date.year)
+
+
+# Convert 1-based column index to A1 notation letter
+def col_index_to_letter(index):
+    result = ""
+    while index > 0:
+        index, remainder = divmod(index - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
+    
+
+def set_column_widths(sheet):
+    widths = [20, 100, 80, 80, 80, 80, 60, 200]
+    for i, w in enumerate(widths, start=1):
+        set_column_width(sheet, col_index_to_letter(i), w)
+
+
+# track start of each week
+def get_week_index(workout_date, anchor_date):
+    delta_days = (workout_date - anchor_date).days
+    return delta_days // 7
+
 
 def rgb_to_normalized(rgb):
     return {
@@ -208,6 +269,7 @@ def rgb_to_normalized(rgb):
         "green": rgb[1] / 255,
         "blue": rgb[2] / 255
     }
+
 
 def sec_to_hms(seconds):
     h = seconds // 3600

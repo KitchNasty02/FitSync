@@ -1,17 +1,29 @@
 from garminconnect import Garmin
 from datetime import datetime, timedelta
 from utils.encryption import decrypt_password, load_key
+import requests
+import random
+import time
 
 def get_garmin_client(email, encrypted_pw):
-    try:
-        key = load_key()
-        decrypted_pw = decrypt_password(encrypted_pw, key)
-        client = Garmin(email, decrypted_pw)
-        client.login()
-        return client
-    except:
-        print(f"Error when logging into client: {email}")
-        return None
+    try_counter = 0
+    while try_counter < 5:
+        try:
+            key = load_key()
+            decrypted_pw = decrypt_password(encrypted_pw, key)
+            client = Garmin(email, decrypted_pw)
+            client.login()
+            return client
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                try_counter += 1
+                sleep_time = random.randint(2, 8)
+                print(f"Rate limit hit (try {try_counter}). Sleeping {sleep_time} minutes...")
+                time.sleep(sleep_time * 60)
+            else:
+                print(f"Exception: {e}")
+
+    return None
 
 
 def fetch_workouts(client, days=30):
