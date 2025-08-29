@@ -26,10 +26,14 @@ def get_garmin_client(email, encrypted_pw):
     return None
 
 
-def fetch_workouts(client, days=30):
+def fetch_workouts(client, days=30, date=None):
     try:
         today = datetime.now().date()
-        start = today - timedelta(days=days)
+
+        if date:
+            start = datetime.strptime(date, "%m/%d/%Y")
+        else:
+            start = today - timedelta(days=days)
 
         activities = client.get_activities_by_date(start.isoformat(), today.isoformat())
         return activities
