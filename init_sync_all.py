@@ -39,8 +39,8 @@ def init_sync_all():
             if not client:
                 continue
 
-            # workouts = fetch_all_workouts(client)
-            workouts = fetch_workouts(client, date="07/01/2025")
+            workouts = fetch_all_workouts(client)
+            # workouts = fetch_workouts(client, date="07/01/2025")
             print(f"Fetched {len(workouts)} workouts for {username}")
 
             # Access sheet
