@@ -20,14 +20,18 @@ def safe_request(func, *args, max_sleep=60, **kwargs):
 # colors
 MONTH_COLOR = (207, 226, 243)
 HEADERS_COLOR = (159, 197, 232)
+# WEEK_COLORS = [
+#     {"red": 0.90, "green": 0.95, "blue": 1.0},  # light blue
+#     {"red": 0.90, "green": 1.0, "blue": 0.90}   # light green
+# ]
 WEEK_COLORS = [
-    {"red": 0.90, "green": 0.95, "blue": 1.0},  # light blue
-    {"red": 0.90, "green": 1.0, "blue": 0.90}   # light green
-]
-ROW_COLORS = [
     {"red": 0.95, "green": 0.95, "blue": 0.95},  # medium gray
     {"red": 1.0,  "green": 1.0,  "blue": 1.0}    # white
 ]
+
+WHITE = {"red": 1.0,  "green": 1.0,  "blue": 1.0}
+
+ROW_HEIGHT = 30
 
 # convert to better labels in sheet
 TYPEKEY_MAP = {
@@ -49,9 +53,9 @@ def update_header(sheet):
     # TODO: Add update for weekly mileage graphs and stuff
     # would shift the frozen rows down
 
-    headers = ["", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
+    headers = ["", "", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
     safe_request(sheet.update, "A1", [headers])
-    safe_request(sheet.format, "A1:H1", {
+    safe_request(sheet.format, "A1:I1", {
         "horizontalAlignment": "CENTER", 
         "backgroundColor": rgb_to_normalized(HEADERS_COLOR),
         "textFormat": {
@@ -84,7 +88,7 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
                 tab_map[tab_title] = spreadsheet.worksheet(tab_title)
             except:
                 # TODO: update these to set up right number of rows/cols
-                tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=8)
+                tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=9)
                 update_header(tab_map[tab_title])
                 set_column_widths(tab_map[tab_title])
 
@@ -114,37 +118,54 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
 
         insert_index = 2
 
-        # goes through workouts by date
-        for week_index in sorted(week_groups.keys(), reverse=True):
+        # get full range of weeks for the tab
+        min_week = min(week_groups.keys())
+        max_week = max(week_groups.keys())
+
+        # goes through workouts by date over all weeks (even if no workouts exist)
+        for week_index in reversed(range(min_week, max_week + 1)):
             week_color = WEEK_COLORS[week_index % 2]
-            week_data = week_groups[week_index]
+            week_data = week_groups.get(week_index, {})  # may be empty
 
             block_start = insert_index
             week_label_blocks = []
 
-            for date in sorted(week_data.keys(), reverse=True):
-                workouts = week_data[date]
-                month_key = date.strftime('%Y-%m')
+            # insert blank row if no workouts exist for the week
+            if not week_data:
+                safe_request(sheet.insert_row, [""] * 9, index=insert_index)
+                safe_request(sheet.format, f"A{insert_index}:I{insert_index}", {
+                    "backgroundColor": week_color,
+                    "horizontalAlignment": "CENTER",
+                    "textFormat": {"fontSize": 10}
+                })
+                safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT)
+                week_label_blocks.append((insert_index, insert_index))
+                insert_index += 1
 
-                # Insert month divider if needed
-                if month_key not in inserted_months:
-                    # close previous bock for the week if the month changes
-                    if block_start < insert_index:
-                        week_label_blocks.append((block_start, insert_index - 1))
-                    insert_month_divider(sheet, date, insert_index)
-                    inserted_months.add(month_key)
-                    insert_index += 1
-                    block_start = insert_index
+            else:
+                for date in sorted(week_data.keys(), reverse=True):
+                    workouts = week_data[date]
+                    month_key = date.strftime('%Y-%m')
 
-                # Insert workouts
-                for i, workout in enumerate(workouts):
-                    insert_row(sheet, workout, date, insert_index, i == 0, row_color=week_color)
-                    insert_index += 1
+                    # Insert month divider if needed
+                    if month_key not in inserted_months:
+                        # close previous bock for the week if the month changes
+                        if block_start < insert_index:
+                            week_label_blocks.append((block_start, insert_index - 1))
+                        insert_month_divider(sheet, date, insert_index)
+                        inserted_months.add(month_key)
+                        insert_index += 1
+                        block_start = insert_index
 
-                # Merge date cells if multiple workouts in a day
-                if len(workouts) > 1:
-                    safe_request(sheet.merge_cells, f"B{insert_index - len(workouts)}:B{insert_index - 1}")
-                    safe_request(sheet.format, f"B{insert_index - len(workouts)}", {"verticalAlignment": "MIDDLE"})
+                    # Insert workouts
+                    for i, workout in enumerate(workouts):
+                        insert_row(sheet, workout, date, insert_index, i == 0, row_color=week_color)
+                        insert_index += 1
+
+                    # Merge date cells if multiple workouts in a day
+                    if len(workouts) > 1:
+                        safe_request(sheet.merge_cells, f"C{insert_index - len(workouts)}:C{insert_index - 1}")
+                        safe_request(sheet.format, f"C{insert_index - len(workouts)}", {"verticalAlignment": "MIDDLE"})
 
             # Final block for this week
             if block_start < insert_index:
@@ -152,22 +173,19 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
 
             # Apply vertical week labels per block
             for block_start, block_end in week_label_blocks:
+                # make indention column white
+                safe_request(sheet.format, f"A{block_start}:A{block_end}", {"backgroundColor": WHITE})
 
-                print(f"block start: {block_start}, block end: {block_end}")
-
-                safe_request(sheet.update, f"A{block_start}", [[f"W{week_index + 1}"]])
+                safe_request(sheet.update, f"B{block_start}", [[f"W{week_index + 1}"]])
                 if block_end > block_start:
-                    safe_request(sheet.merge_cells, f"A{block_start}:A{block_end}")
-                    print(f"merged cells A{block_start}:A{block_end}")
+                    safe_request(sheet.merge_cells, f"B{block_start}:B{block_end}")
 
-                safe_request(sheet.format, f"A{block_start}", {
+                safe_request(sheet.format, f"B{block_start}", {
                     "textRotation": {"angle": 90},
                     "horizontalAlignment": "CENTER",
                     "verticalAlignment": "MIDDLE",
                     "textFormat": {"bold": True}
                 })
-
-            print(f"Week {week_index + 1}: blocks={week_label_blocks}")
 
         print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
 
@@ -176,8 +194,8 @@ def insert_month_divider(sheet, date, insert_index):
     divider_text = date.strftime('%B %Y')
     
     safe_request(sheet.insert_row, [divider_text], index=insert_index)
-    safe_request(set_row_height, sheet, str(insert_index), 30) # set row height
-    safe_request(sheet.merge_cells, f"A{insert_index}:H{insert_index}")
+    safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT) # set row height
+    safe_request(sheet.merge_cells, f"A{insert_index}:I{insert_index}")
 
     safe_request(sheet.format, f"A{insert_index}:G{insert_index}", {
         "backgroundColor": rgb_to_normalized(MONTH_COLOR),
@@ -195,6 +213,7 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
 
     row = [
         "",
+        "",
         date.strftime('%m/%d') if is_first_row else "",  
         activity_label, 
         round(workout.get("distance", 0) / 1609.34, 2), 
@@ -207,14 +226,14 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
     safe_request(sheet.insert_row, row, index=insert_index)
 
     # format new row
-    safe_request(set_row_height, sheet, str(insert_index), 30) # set row height
-    safe_request(sheet.format, f"A{insert_index}:H{insert_index}", {
+    safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT) # set row height
+    safe_request(sheet.format, f"A{insert_index}:I{insert_index}", {
         "backgroundColor": row_color,
         "horizontalAlignment": "CENTER",
         "verticalAlignment": "MIDDLE",
         "textFormat": {"fontSize": 10}
     })
-    safe_request(sheet.format, f"H{insert_index}", {"horizontalAlignment": "LEFT"})
+    safe_request(sheet.format, f"I{insert_index}", {"horizontalAlignment": "LEFT"})
 
 
 
@@ -242,7 +261,7 @@ def col_index_to_letter(index):
     
 
 def set_column_widths(sheet):
-    widths = [20, 100, 80, 80, 80, 80, 60, 200]
+    widths = [20, 20, 100, 80, 80, 80, 80, 60, 500]
     for i, w in enumerate(widths, start=1):
         set_column_width(sheet, col_index_to_letter(i), w)
 

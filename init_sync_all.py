@@ -1,11 +1,15 @@
-from utils.garmin_fetch import get_garmin_client, fetch_all_workouts
+from utils.garmin_fetch import (
+    get_garmin_client, 
+    fetch_all_workouts, 
+    fetch_workouts
+)
 from utils.drive_setup import (
     get_gspread_client,
     get_drive_service,
     ensure_fitsync_folder,
     ensure_sheet_in_folder
 )
-from sync_sheet import sync_sheet, update_header
+from sync_sheet import sync_sheet
 import json
 
 
@@ -14,7 +18,7 @@ def load_accounts(path="config/accounts.json"):
         return json.load(file)
     
 
-# sync all workouts on all accounts
+# use this when first making the accounts
 def init_sync_all():
     
     accounts = load_accounts()
@@ -35,7 +39,8 @@ def init_sync_all():
             if not client:
                 continue
 
-            workouts = fetch_all_workouts(client)
+            # workouts = fetch_all_workouts(client)
+            workouts = fetch_workouts(client, date="07/01/2025")
             print(f"Fetched {len(workouts)} workouts for {username}")
 
             # Access sheet
