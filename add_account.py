@@ -1,4 +1,5 @@
 from utils.encryption import load_key, encrypt_password
+from init_sync import init_sync
 from datetime import datetime
 import json
 import os
@@ -65,6 +66,10 @@ username = input("Enter GarminConnect Email: ")
 password = input("Enter CarminConnect Password: ")
 google_email = input("Enter Google Email: ")
 custom_tabs = input("Do you want custom tabs? (y/n -- default is each year)")
+sync_type = input("How would you like to sync? (a=all, d=date, n=none)")
+if sync_type == "d":
+    sync_date = input("What date to start from? (mm/dd/yyyy)")
+
 
 if custom_tabs == 'y':
     season_ranges = get_season_ranges()
@@ -88,3 +93,14 @@ input("Save this account info?")
 
 save_account(name, username, encrypted_password, google_email, season_ranges)
 print("Account Saved.")
+
+# initial sync
+if sync_type == "a":
+    init_sync(name, "all")
+elif sync_type == "d":
+    init_sync(name, "date", sync_date)
+else:
+    init_sync(name, "none")
+
+print(f"{name}'s Account Synced")
+
