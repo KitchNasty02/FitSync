@@ -44,7 +44,7 @@ def fetch_workouts(client, days=30, date=None):
 
 
 
-def fetch_all_workouts(client, max_activities=1000):
+def fetch_all_workouts(client, max_activities=5000):
     
     workouts = []
     start = 0

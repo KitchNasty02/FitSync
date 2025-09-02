@@ -14,5 +14,16 @@
         "username": "joshkitchin@gmail.com",
         "password": "gAAAAABodxdEuzIcA4XC5rR_PTu4q1AJWkkohihWyyqyV24pRRrd0qMcTVwovlVejyqlSapYTBPiKR0Frlyzi5FwHLQ63HoKPg==",
         "google_email": "joshkitchin@gmail.com"
+    },
+    "Ellie Kitchin": {
+        "name": "Ellie Kitchin",
+        "username": "katiekitchin@yahoo.com",
+        "password": "gAAAAABos1-6jE2fGbKD3j2b11cM4Qhk-cn5DGW44N0zrWzABdX1pV-MfBYl6Gw1Ukg6IFln6WesfPQXU7oTRgcVbmyOvyjxcw==",
+        "google_email": "elliegkitch@gmail.com",
+        "season_ranges": {
+            "Indoor 2025": "2025-01-01",
+            "Outdoor Track 2025": "2025-03-03",
+            "Summer 2025": "2025-06-01"
+        }
     }
 }

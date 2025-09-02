@@ -13,22 +13,26 @@ from sync_sheet import sync_sheet
 import json
 
 
-def load_accounts(account, path="config/accounts.json"):
+def load_accounts(path="config/accounts.json"):
     with open(path, "r") as file:
-        return json.load(file)[account]
+        return json.load(file)
     
 
 # sync an account that just got created
-def init_sync(account, sync_type, date=None):
+def init_sync(name, sync_type, date=None):
     
-    account = load_accounts(account)
+    accounts = load_accounts()
+
+    if name not in accounts:
+        print(f"Account '{name}' not found")
+        return
+    
+    data = accounts[name]
     
     # initialize google services
     gc = get_gspread_client()
     drive_service = get_drive_service()
     folder_id = ensure_fitsync_folder(drive_service)
-
-    name, data = account.items()
 
     try:
         username, password = data["username"], data["password"]
@@ -40,6 +44,9 @@ def init_sync(account, sync_type, date=None):
             workouts = fetch_all_workouts(client)
         elif sync_type == "date":
             workouts = fetch_workouts(client, date=date)
+        else:
+            print(f"Unknown sync type: {sync_type}")
+            return
         
         
         print(f"Fetched {len(workouts)} workouts for {username}")
@@ -52,3 +59,8 @@ def init_sync(account, sync_type, date=None):
 
     except Exception as e:
         print(f"Error fetching {name}'s data: {e}")
+
+
+init_sync("Ellie Kitchin", "date", "01/01/2025")
+
+

@@ -65,11 +65,10 @@ name = input("Enter Persons Name: ")
 username = input("Enter GarminConnect Email: ")
 password = input("Enter CarminConnect Password: ")
 google_email = input("Enter Google Email: ")
-custom_tabs = input("Do you want custom tabs? (y/n -- default is each year)")
 sync_type = input("How would you like to sync? (a=all, d=date, n=none)")
 if sync_type == "d":
     sync_date = input("What date to start from? (mm/dd/yyyy)")
-
+custom_tabs = input("Do you want custom tabs? (y/n -- default is each year)")
 
 if custom_tabs == 'y':
     season_ranges = get_season_ranges()

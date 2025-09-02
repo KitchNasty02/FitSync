@@ -37,6 +37,7 @@ ROW_HEIGHT = 30
 TYPEKEY_MAP = {
     "running": "Run",
     "cycling": "Bike",
+    "Indoor_Cardio": "Bike",
     "swimming": "Swim",
     "lap_swimming": "Swim",
     "strength_training": "Strength",
