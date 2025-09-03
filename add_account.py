@@ -39,7 +39,7 @@ def get_season_ranges():
 
 
 # saves username and encrypted password to accounts.json
-def save_account(name, username, encrypted_pw, google_email, season_ranges, path="config/accounts.json"):
+def save_account(name, username, encrypted_pw, google_email, season_ranges, sync_date, path="config/accounts.json"):
     # load existing accounts
     if os.path.exists(path):
         with open(path, "r") as file:
@@ -53,7 +53,8 @@ def save_account(name, username, encrypted_pw, google_email, season_ranges, path
         "username": username,
         "password": encrypted_pw,
         "google_email": google_email,
-        "season_ranges": season_ranges
+        "season_ranges": season_ranges,
+        "last_synced": sync_date
     }
 
     # save
@@ -90,7 +91,7 @@ account_preview = {
 print(json.dumps(account_preview, indent=4))
 input("Save this account info?")
 
-save_account(name, username, encrypted_password, google_email, season_ranges)
+save_account(name, username, encrypted_password, google_email, season_ranges, sync_date)
 print("Account Saved.")
 
 # initial sync
