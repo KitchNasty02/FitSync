@@ -61,6 +61,7 @@ def init_sync(name, sync_type, date=None):
         print(f"Error fetching {name}'s data: {e}")
 
 
-init_sync("Ellie Kitchin", "date", "01/01/2025")
+init_sync("Connor Kitchin", "date", "01/01/2025")
+# init_sync("Ellie Kitchin", "date", "01/01/2025")
 
 

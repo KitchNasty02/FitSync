@@ -2,19 +2,27 @@ from gspread_formatting import set_frozen, set_column_width, set_row_height
 from collections import defaultdict
 from datetime import datetime
 import time
+import re
 
+COOLDOWN_DURATION = 120
 
 # ensures the api request do not fail from the rate limit
 def safe_request(func, *args, max_sleep=60, **kwargs):
-    for sleep_time in [10, 15, 30, 45, max_sleep]:
+    sleep_times = [10, 15, 30, 45, max_sleep]
+    for sleep_time in sleep_times:
         try:
             return func(*args, **kwargs)
         except Exception as e:
             if "429" in str(e):
-                print(f"Rate limit hit, trying again in {sleep_time}s...")
-                time.sleep(sleep_time)
+                print(f"Rate limit hit. Cooling down for {COOLDOWN_DURATION}s...")
+                for remaining in range(COOLDOWN_DURATION, 0, -1):
+                    print(f"Resuming in {remaining}s...", end="\r")
+                    time.sleep(1)
+                print("Cooldown complete. Retrying now.")
             else:
                 raise e
+    raise RuntimeError("Exceeded retry attempts due to persistent 429 errors.")
+
 
 
 # colors
@@ -36,6 +44,7 @@ ROW_HEIGHT = 30
 # convert to better labels in sheet
 TYPEKEY_MAP = {
     "running": "Run",
+    "Track_Running": "Run",
     "cycling": "Bike",
     "Indoor_Cardio": "Bike",
     "swimming": "Swim",
@@ -81,8 +90,12 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
         workout_date = w["startTimeLocal"].date()
         tab_title = get_tab_name(workout_date, season_ranges)
         tab_groups[tab_title][workout_date].append(w)
+
+    sorted_tabs = sorted(tab_groups.keys(), key=lambda t: get_tab_sort_key(t, season_ranges))
     
-    for tab_title, daily_groups in tab_groups.items():
+    for tab_title in sorted_tabs:
+        daily_groups = tab_groups[tab_title]
+
         # get or create tab
         if tab_title not in tab_map:
             try:
@@ -95,17 +108,27 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
 
         sheet = tab_map[tab_title]
 
-        top_row = sheet.row_values(3)
-        latest_date = top_row[1] if len(top_row) > 1 else None
+        latest_date = get_last_workout_date(sheet)
+
+        # delete rows related to latest date in case of previous errors
+        if latest_date:
+            rows_to_delete = find_rows_with_date(sheet, latest_date)
+            for row_index in reversed(rows_to_delete):
+                try:
+                    safe_request(sheet.delete_rows, row_index)
+                except Exception as e:
+                    print(f"Failed to delete row {row_index}: {e}")
 
         unsynced_dates = [
             date for date in daily_groups
-            # get dates that are after the last synced one (the top on in row 3 of sheet)
-            if not latest_date or date.strftime("%m/%d") > latest_date
+            # get dates that are before the last synced one
+            if not latest_date or date > latest_date
         ]
         if not unsynced_dates:
             print(f"Tab '{tab_title}' is already up to date.")
             continue
+
+        print(f"Last date entered: {latest_date}, first date: {unsynced_dates[0]}")
         
         # first date in tab -- MAY NEED TO UPDATE TO MAKE IT THE FIRST DATE IN 
         anchor_date = min(unsynced_dates)
@@ -117,14 +140,15 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             week_index = get_week_index(date, anchor_date)
             week_groups[week_index][date] = daily_groups[date]
 
-        insert_index = 2
+        # row after the last one with info
+        insert_index = len(sheet.get_all_values()) + 1
 
         # get full range of weeks for the tab
         min_week = min(week_groups.keys())
         max_week = max(week_groups.keys())
 
         # goes through workouts by date over all weeks (even if no workouts exist)
-        for week_index in reversed(range(min_week, max_week + 1)):
+        for week_index in range(min_week, max_week + 1):
             week_color = WEEK_COLORS[week_index % 2]
             week_data = week_groups.get(week_index, {})  # may be empty
 
@@ -144,7 +168,7 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
                 insert_index += 1
 
             else:
-                for date in sorted(week_data.keys(), reverse=True):
+                for date in sorted(week_data.keys()):
                     workouts = week_data[date]
                     month_key = date.strftime('%Y-%m')
 
@@ -291,6 +315,55 @@ def sec_to_hms(seconds):
         return f"{int(s):02}"
     else:
         return f"{int(h):01}:{int(m):02}:{int(s):02}"
+
+
+def get_tab_sort_key(tab_title, season_ranges):
+    if season_ranges and tab_title in season_ranges:
+        return datetime.strptime(season_ranges[tab_title], "%Y-%m-%d")
+    try:
+        return datetime.strptime(tab_title.split()[-1], "%Y")  # fallback
+    except:
+        return datetime.min  # push unknowns to the front
+
+
+# gets the most recent workout date synced
+def get_last_workout_date(sheet):
+    rows = sheet.get_all_values()
+    inferred_year = None
+    month_pattern = re.compile(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$")
+
+
+    for row in reversed(rows):
+         # Check for most recent month
+        if len(row) >= 1:
+            cell = row[0].strip()
+            match = month_pattern.match(cell)
+            if match:
+                _, year = match.groups()
+                inferred_year = int(year)
+
+        # get last day/month
+        if len(row) < 3:
+            continue
+        date_str = row[2].strip()  # get date column
+        try:
+            return datetime.strptime(f"{inferred_year}-{date_str}", "%Y-%m/%d").date()
+        except ValueError:
+            continue  # skip header, divider, and weird rows
+    return None
+
+
+# finds the rows with a given date
+def find_rows_with_date(sheet, target_date):
+    rows = sheet.get_all_values()
+    target_str = target_date.strftime("%m/%d")
+    rows_to_delete = []
+
+    for i, row in enumerate(rows, start=1): 
+        if len(row) >= 3 and row[2].strip() == target_str:
+            rows_to_delete.append(i)
+
+    return rows_to_delete
 
 
 
