@@ -1,5 +1,10 @@
 # FitSync
 
+# Maybe add first
+ - avg pace column
+ - a couple graphs up top
+
+
 
 # Added
  - last_sync added to account info
