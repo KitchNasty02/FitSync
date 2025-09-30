@@ -14,8 +14,8 @@ def safe_request(func, *args, max_sleep=60, **kwargs):
             return func(*args, **kwargs)
         except Exception as e:
             if "429" in str(e):
-                print(f"Rate limit hit. Cooling down for {COOLDOWN_DURATION}s...")
-                for remaining in range(COOLDOWN_DURATION, 0, -1):
+                print(f"Rate limit hit. Cooling down for {sleep_time}s...")
+                for remaining in range(sleep_time, 0, -1):
                     print(f"Resuming in {remaining}s...", end="\r")
                     time.sleep(1)
                 print("Cooldown complete. Retrying now.")
