@@ -7,13 +7,17 @@
         "season_ranges": {
             "Winter 2025": "2025-01-01",
             "Summer 2025": "2025-06-01"
-        }
+        },
+        "last_synced": ""
+        
     },
     "Josh Kitchin": {
         "name": "Josh Kitchin",
         "username": "joshkitchin@gmail.com",
         "password": "gAAAAABodxdEuzIcA4XC5rR_PTu4q1AJWkkohihWyyqyV24pRRrd0qMcTVwovlVejyqlSapYTBPiKR0Frlyzi5FwHLQ63HoKPg==",
-        "google_email": "joshkitchin@gmail.com"
+        "google_email": "joshkitchin@gmail.com",
+        "season_ranges": "None",
+        "last_synced": ""
     },
     "Ellie Kitchin": {
         "name": "Ellie Kitchin",
@@ -24,6 +28,7 @@
             "Indoor 2025": "2025-01-01",
             "Outdoor Track 2025": "2025-03-03",
             "Summer 2025": "2025-06-01"
-        }
+        },
+        "last_synced": ""
     }
 }

@@ -111,13 +111,13 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
         latest_date = get_last_workout_date(sheet)
 
         # delete rows related to latest date in case of previous errors
-        if latest_date:
-            rows_to_delete = find_rows_with_date(sheet, latest_date)
-            for row_index in reversed(rows_to_delete):
-                try:
-                    safe_request(sheet.delete_rows, row_index)
-                except Exception as e:
-                    print(f"Failed to delete row {row_index}: {e}")
+        # if latest_date:
+        #     rows_to_delete = find_rows_with_date(sheet, latest_date)
+        #     for row_index in reversed(rows_to_delete):
+        #         try:
+        #             safe_request(sheet.delete_rows, row_index)
+        #         except Exception as e:
+        #             print(f"Failed to delete row {row_index}: {e}")
 
         unsynced_dates = [
             date for date in daily_groups

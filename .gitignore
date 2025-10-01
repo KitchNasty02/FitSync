@@ -2,3 +2,4 @@ config/key.key
 config/credentials.json
 config/token.json
 config/accounts.json
+config/last_run.log
