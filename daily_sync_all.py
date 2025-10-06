@@ -65,6 +65,8 @@ def daily_sync_all():
             today = datetime.strftime(today, "%m/%d/%Y")
             last_run = datetime.strftime(last_run, "%m/%d/%Y")
 
+            # last_run = "10/01/2025"
+
             print(f"Fetching workouts from {last_run} to {today}")
             workouts = fetch_workouts(client, date=last_run)
             print(f"Fetched {len(workouts)} workouts for {username}")
