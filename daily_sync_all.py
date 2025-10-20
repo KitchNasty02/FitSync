@@ -84,3 +84,6 @@ def daily_sync_all():
 
 
 daily_sync_all()
+
+while True:
+    pass
