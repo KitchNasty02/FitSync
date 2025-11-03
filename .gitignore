@@ -3,5 +3,5 @@ config/credentials.json
 config/token.json
 config/accounts.json
 config/last_run.log
-config
-__pycache__
+/config
+/__pycache__
