@@ -6,4 +6,4 @@
 
 
 # TODO Bug Fixes
- - Program not running using Windows scheduler (seems like the program is erroring when called)
+ - new month header when new workouts are added (should only be added if needed)
