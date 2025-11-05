@@ -14,12 +14,15 @@ from datetime import date, datetime
 import json
 import os
 
+# last run date stored in log
 log_file = "config/last_run.log"
+
 
 def record_last_run():
     now = datetime.now()
     with open(log_file, "w") as f:
         f.write(now.isoformat())
+
 
 def get_last_run():
     if os.path.exists(log_file):
@@ -27,6 +30,7 @@ def get_last_run():
             timestamp_str = f.read()
         return datetime.fromisoformat(timestamp_str)
     return None
+
 
 def load_accounts(path="config/accounts.json"):
     with open(path, "r") as file:

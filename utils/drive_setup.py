@@ -6,7 +6,7 @@ import os
 
 ADMIN_EMAIL = "connorkitch10@gmail.com"
 
-# Scopes for Google Sheets & Drive
+# scopes for google sheets and drive
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets"
@@ -38,14 +38,17 @@ def get_drive_service():
     return build("drive", "v3", credentials=creds)
 
 
+# make sure fitsync folder exists
 def ensure_fitsync_folder(drive_service, folder_name="FitSync Sheets"):
     query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder'"
     results = drive_service.files().list(q=query, fields="files(id)").execute()
     folders = results.get("files", [])
 
+    # return folder if exists
     if folders:
         return folders[0]["id"]
 
+    # make new folder if it does not exist
     metadata = {
         "name": folder_name,
         "mimeType": "application/vnd.google-apps.folder"
@@ -70,6 +73,7 @@ def ensure_sheet_in_folder(gc, drive_service, username, user_email, folder_id):
     result = drive_service.files().list(q=query, fields="files(id, name)").execute()
     existing_files = result.get("files", [])
 
+    # return sheet if it already exists
     if existing_files:
         sheet_id = existing_files[0]["id"]
         sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}"
@@ -77,7 +81,7 @@ def ensure_sheet_in_folder(gc, drive_service, username, user_email, folder_id):
         
         return sheet_id, sheet_url
 
-    # create new sheet
+    # create new sheet if one does not exist
     sheet = gc.create(sheet_name)
     sheet_id = sheet.id
     
@@ -94,6 +98,7 @@ def ensure_sheet_in_folder(gc, drive_service, username, user_email, folder_id):
     return sheet_id, sheet.url
 
 
+# share sheet with a given google user
 def share_sheet_with_user(drive_service, file_id, user_email, admin_email):
     permissions = [
         {
@@ -116,3 +121,8 @@ def share_sheet_with_user(drive_service, file_id, user_email, admin_email):
         ).execute()
 
     print(f"Shared sheet with {user_email} and {admin_email}")
+
+
+
+
+    

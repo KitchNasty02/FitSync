@@ -1,12 +1,13 @@
 from cryptography.fernet import Fernet
-import os
 
 
+# load local key
 def load_key(key_path="config/key.key"):
     with open(key_path, "rb") as file:
         return file.read()
     
 
+# generate a new key
 def generate_key(key_path="config/key.key"):
     key = Fernet.generate_key()
     with open(key_path, "wb") as file:

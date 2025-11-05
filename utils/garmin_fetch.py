@@ -5,7 +5,10 @@ import requests
 import random
 import time
 
+
+# return the garmin api client for a given account
 def get_garmin_client(email, encrypted_pw):
+    # try 5 times to get the client
     try_counter = 0
     while try_counter < 5:
         try:
@@ -14,6 +17,7 @@ def get_garmin_client(email, encrypted_pw):
             client = Garmin(email, decrypted_pw)
             client.login()
             return client
+        
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
                 try_counter += 1
@@ -26,6 +30,7 @@ def get_garmin_client(email, encrypted_pw):
     return None
 
 
+# get workouts from garmin client since date or the past given number of days
 def fetch_workouts(client, days=30, date=None):
     try:
         today = datetime.now().date()
@@ -43,13 +48,14 @@ def fetch_workouts(client, days=30, date=None):
         return []
 
 
-
+# get all workouts from garmin client (with a bultin cap of 5000 different activities)
 def fetch_all_workouts(client, max_activities=5000):
     
     workouts = []
     start = 0
 
     while True:
+        # fetch workouts in batches of 20
         batch = client.get_activities(start, 20)
         if not batch:
             break
@@ -59,3 +65,6 @@ def fetch_all_workouts(client, max_activities=5000):
             break
 
     return workouts
+
+
+

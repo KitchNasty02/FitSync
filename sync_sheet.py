@@ -8,6 +8,7 @@ COOLDOWN_DURATION = 120
 
 # ensures the api request do not fail from the rate limit
 def safe_request(func, *args, max_sleep=60, **kwargs):
+    # sleep time increases each time limit is hit
     sleep_times = [10, 15, 30, 45, max_sleep]
     for sleep_time in sleep_times:
         try:
@@ -102,6 +103,7 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
                 tab_map[tab_title] = spreadsheet.worksheet(tab_title)
             except:
                 # TODO: update these to set up right number of rows/cols
+                # TODO add avg pace column
                 tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=9)
                 update_header(tab_map[tab_title])
                 set_column_widths(tab_map[tab_title])
