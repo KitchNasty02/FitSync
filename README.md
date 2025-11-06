@@ -14,4 +14,4 @@ FitSync is a python program that uses the public Garmin API to pull user activit
 
 
 ## TODO Bug Fixes
- - new month header when new workouts are added (should only be added if needed)
+ - None found as of now
