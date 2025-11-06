@@ -1,6 +1,6 @@
 from gspread_formatting import set_frozen, set_column_width, set_row_height
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import re
 
@@ -130,11 +130,14 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             print(f"Tab '{tab_title}' is already up to date.")
             continue
 
-        print(f"Last date entered: {latest_date}, first date: {unsynced_dates[0]}")
         
-        # first date in tab -- MAY NEED TO UPDATE TO MAKE IT THE FIRST DATE IN 
-        anchor_date = min(unsynced_dates)
-        inserted_months = set()
+        
+        # get first date in tab
+        anchor_date = get_first_date(sheet, unsynced_dates)
+
+        print(f"Last date entered: {latest_date}, first date in sheet: {anchor_date}")
+            
+        inserted_months = get_existing_month_dividers(sheet)
 
         # Group workouts by week
         week_groups = defaultdict(lambda: defaultdict(list))
@@ -353,6 +356,61 @@ def get_last_workout_date(sheet):
         except ValueError:
             continue  # skip header, divider, and weird rows
     return None
+
+
+
+
+# gets the first date in the sheet to base the week number off of
+def get_first_date(sheet, unsynced_dates):
+    rows = sheet.get_all_values()
+    inferred_year = None
+    month_pattern = re.compile(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$")
+
+
+    # Go through rows from top to bottom
+    for row in rows:
+        if len(row) >= 1:
+            cell = row[0].strip()
+            match = month_pattern.match(cell)
+            if match:
+                _, year = match.groups()
+                inferred_year = int(year)
+
+        if len(row) >= 3:
+            date_str = row[2].strip()
+            try:
+                if inferred_year:
+                    return datetime.strptime(f"{inferred_year}-{date_str}", "%Y-%m/%d").date()
+            except ValueError:
+                continue
+
+    # fallback: no existing date found
+    return min(unsynced_dates)
+
+
+
+
+
+
+
+# get month dividers that are already in the sheet
+def get_existing_month_dividers(sheet):
+    rows = sheet.get_all_values()
+    month_pattern = re.compile(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$")
+    existing_months = set()
+
+    for row in rows:
+        if len(row) >= 1:
+            cell = row[0].strip()
+            # check if the first col in the row has a month in it
+            match = month_pattern.match(cell)
+            if match:
+                # add to month to existing_months in YYYY-MM format
+                month_name, year = match.groups()
+                month_num = datetime.strptime(month_name, "%B").month
+                existing_months.add(f"{year}-{month_num:02}")
+    
+    return existing_months
 
 
 # finds the rows with a given date

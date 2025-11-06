@@ -58,18 +58,16 @@ def daily_sync_all():
             if not client:
                 continue
 
-            """
-            get the last time script was run
-            sync back through this date so it will update all workouts if the script fails to run
-            """
+
+            # get the last time script was run
+            # sync back through this date so it will update all workouts if the script fails to run
+            
             last_run = get_last_run()
             
             # get todays workouts (syncs at 11:59pm via windows scheduler)
             today = date.today()
             today = datetime.strftime(today, "%m/%d/%Y")
             last_run = datetime.strftime(last_run, "%m/%d/%Y")
-
-            # last_run = "10/01/2025"
 
             print(f"Fetching workouts from {last_run} to {today}")
             workouts = fetch_workouts(client, date=last_run)
