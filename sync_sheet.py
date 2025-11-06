@@ -25,6 +25,9 @@ def safe_request(func, *args, max_sleep=60, **kwargs):
     raise RuntimeError("Exceeded retry attempts due to persistent 429 errors.")
 
 
+# determines how many data columns there are
+NUM_COLS = 10
+
 
 # colors
 MONTH_COLOR = (207, 226, 243)
@@ -64,9 +67,9 @@ def update_header(sheet):
     # TODO: Add update for weekly mileage graphs and stuff
     # would shift the frozen rows down
 
-    headers = ["", "", "Date", "Activity", "Distance", "Time", "Avg HR", "RPE", "Description"]
+    headers = ["", "", "Date", "Activity", "Distance", "Time", "Avg Pace", "Avg HR", "RPE", "Description"]
     safe_request(sheet.update, "A1", [headers])
-    safe_request(sheet.format, "A1:I1", {
+    safe_request(sheet.format, "A1:J1", {
         "horizontalAlignment": "CENTER", 
         "backgroundColor": rgb_to_normalized(HEADERS_COLOR),
         "textFormat": {
@@ -102,9 +105,8 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             try:
                 tab_map[tab_title] = spreadsheet.worksheet(tab_title)
             except:
-                # TODO: update these to set up right number of rows/cols
-                # TODO add avg pace column
-                tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=9)
+                # create tab with a starting 20 rows and NUM_COLS columns
+                tab_map[tab_title] = spreadsheet.add_worksheet(title=tab_title, rows=20, cols=NUM_COLS)
                 update_header(tab_map[tab_title])
                 set_column_widths(tab_map[tab_title])
 
@@ -225,7 +227,7 @@ def insert_month_divider(sheet, date, insert_index):
     
     safe_request(sheet.insert_row, [divider_text], index=insert_index)
     safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT) # set row height
-    safe_request(sheet.merge_cells, f"A{insert_index}:I{insert_index}")
+    safe_request(sheet.merge_cells, f"A{insert_index}:J{insert_index}")
 
     safe_request(sheet.format, f"A{insert_index}:G{insert_index}", {
         "backgroundColor": rgb_to_normalized(MONTH_COLOR),
@@ -241,29 +243,46 @@ def insert_row(sheet, workout, date, insert_index, is_first_row, row_color):
     raw_type = workout.get("activityType", {}).get("typeKey", "")
     activity_label = TYPEKEY_MAP.get(raw_type, raw_type.title())
 
+    distance_miles = round(workout.get("distance", 0) / 1609.34, 2)
+    duration_sec = workout.get("duration", 0)
+    duration = sec_to_hms(workout.get("duration", 0))
+
+    if distance_miles > 0:
+        pace_sec_per_mile = duration_sec / distance_miles
+        minutes = int(pace_sec_per_mile // 60)
+        seconds = int(round(pace_sec_per_mile % 60))
+        avg_pace = f"{minutes}:{seconds:02d}"
+    else:
+        avg_pace = ""
+
+    date_label = date.strftime('%m/%d') if is_first_row else ""
+    avg_hr = workout.get("averageHR", "")
+    description = workout.get("description", "")
+
     row = [
         "",
         "",
-        date.strftime('%m/%d') if is_first_row else "",  
+        date_label,
         activity_label, 
-        round(workout.get("distance", 0) / 1609.34, 2), 
-        sec_to_hms(workout.get("duration", 0)), 
-        workout.get("averageHR", ""),
+        distance_miles, 
+        duration, 
+        avg_pace,
+        avg_hr,
         "",
-        workout.get("description", "")
+        description
     ]
 
     safe_request(sheet.insert_row, row, index=insert_index)
 
     # format new row
     safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT) # set row height
-    safe_request(sheet.format, f"A{insert_index}:I{insert_index}", {
+    safe_request(sheet.format, f"A{insert_index}:J{insert_index}", {
         "backgroundColor": row_color,
         "horizontalAlignment": "CENTER",
         "verticalAlignment": "MIDDLE",
         "textFormat": {"fontSize": 10}
     })
-    safe_request(sheet.format, f"I{insert_index}", {"horizontalAlignment": "LEFT"})
+    safe_request(sheet.format, f"J{insert_index}", {"horizontalAlignment": "LEFT"})
 
 
 
@@ -291,7 +310,7 @@ def col_index_to_letter(index):
     
 
 def set_column_widths(sheet):
-    widths = [20, 20, 100, 80, 80, 80, 80, 60, 500]
+    widths = [20, 20, 100, 80, 80, 80, 80, 80, 60, 500]
     for i, w in enumerate(widths, start=1):
         set_column_width(sheet, col_index_to_letter(i), w)
 
