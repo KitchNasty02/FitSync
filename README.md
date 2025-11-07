@@ -1,6 +1,6 @@
 # FitSync
 
-FitSync is a python program that uses the public Garmin API to pull user activities and format them nicely in Google Sheets. This was made for tracking and analytics of my families activities.
+FitSync is a Python program that uses the public Garmin API to pull user activities and format them nicely in Google Sheets. This was made for tracking and analytics of my families activities.
 
 ### How it works:
 - user accounts are saved locally with encrypted passwords
@@ -14,4 +14,4 @@ FitSync is a python program that uses the public Garmin API to pull user activit
 
 
 ## TODO Bug Fixes
- - None found as of now
+ - Week labels are not merging to the previous week label if they are the same
