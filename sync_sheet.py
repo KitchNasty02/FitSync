@@ -123,11 +123,10 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
         #         except Exception as e:
         #             print(f"Failed to delete row {row_index}: {e}")
 
-        unsynced_dates = [
-            date for date in daily_groups
-            # get dates that are before the last synced one
-            if not latest_date or date > latest_date
-        ]
+        existing_dates = get_existing_dates(sheet)
+
+        unsynced_dates = [date for date in daily_groups if date not in existing_dates]
+
         if not unsynced_dates:
             print(f"Tab '{tab_title}' is already up to date.")
             continue
@@ -160,7 +159,6 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
             week_data = week_groups.get(week_index, {})  # may be empty
 
             block_start = insert_index
-            week_label_blocks = []
 
             # insert blank row if no workouts exist for the week
             if not week_data:
@@ -171,23 +169,29 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
                     "textFormat": {"fontSize": 10}
                 })
                 safe_request(set_row_height, sheet, str(insert_index), ROW_HEIGHT)
-                week_label_blocks.append((insert_index, insert_index))
+                
+                week_start_row = insert_index
+                week_end_row = insert_index
                 insert_index += 1
 
             else:
+                week_start_row = insert_index
                 for date in sorted(week_data.keys()):
                     workouts = week_data[date]
+
                     month_key = date.strftime('%Y-%m')
 
                     # Insert month divider if needed
                     if month_key not in inserted_months:
                         # close previous bock for the week if the month changes
                         if block_start < insert_index:
-                            week_label_blocks.append((block_start, insert_index - 1))
+                            week_start_row_full, week_end_row_full = get_full_week_range(sheet, week_start_row, week_end_row, week_index, anchor_date)
+                            merge_week_label(sheet, week_start_row_full, week_end_row_full, week_index)
+
                         insert_month_divider(sheet, date, insert_index)
                         inserted_months.add(month_key)
                         insert_index += 1
-                        block_start = insert_index
+                        week_start_row = insert_index
 
                     # Insert workouts
                     for i, workout in enumerate(workouts):
@@ -199,25 +203,10 @@ def sync_sheet(spreadsheet, workout_data, season_ranges=None):
                         safe_request(sheet.merge_cells, f"C{insert_index - len(workouts)}:C{insert_index - 1}")
                         safe_request(sheet.format, f"C{insert_index - len(workouts)}", {"verticalAlignment": "MIDDLE"})
 
-            # Final block for this week
-            if block_start < insert_index:
-                week_label_blocks.append((block_start, insert_index - 1))
+                week_end_row = insert_index - 1
 
-            # Apply vertical week labels per block
-            for block_start, block_end in week_label_blocks:
-                # make indention column white
-                safe_request(sheet.format, f"A{block_start}:A{block_end}", {"backgroundColor": WHITE})
-
-                safe_request(sheet.update, f"B{block_start}", [[f"W{week_index + 1}"]])
-                if block_end > block_start:
-                    safe_request(sheet.merge_cells, f"B{block_start}:B{block_end}")
-
-                safe_request(sheet.format, f"B{block_start}", {
-                    "textRotation": {"angle": 90},
-                    "horizontalAlignment": "CENTER",
-                    "verticalAlignment": "MIDDLE",
-                    "textFormat": {"bold": True}
-                })
+            week_start_row_full, week_end_row_full = get_full_week_range(sheet, week_start_row, week_end_row, week_index, anchor_date)
+            merge_week_label(sheet, week_start_row_full, week_end_row_full, week_index)
 
         print(f"Inserted {sum(len(v) for v in daily_groups.values())} new workouts into '{tab_title}'")
 
@@ -407,8 +396,27 @@ def get_first_date(sheet, unsynced_dates):
     return min(unsynced_dates)
 
 
+# returns all the dates in the tab
+def get_existing_dates(sheet):
+    rows = sheet.get_all_values()
+    existing_dates = set()
+    inferred_year = None
+    month_pattern = re.compile(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$")
 
-
+    for row in rows:
+        if len(row) >= 1:
+            cell = row[0].strip()
+            match = month_pattern.match(cell)
+            if match:
+                _, year = match.groups()
+                inferred_year = int(year)
+        if len(row) >= 3 and inferred_year:
+            date_str = row[2].strip()
+            try:
+                existing_dates.add(datetime.strptime(f"{inferred_year}-{date_str}", "%Y-%m/%d").date())
+            except ValueError:
+                continue
+    return existing_dates
 
 
 
@@ -446,7 +454,79 @@ def find_rows_with_date(sheet, target_date):
 
 
 
+def merge_week_label(sheet, start_row, end_row, week_index):
+    """
+    Merge the week label in column B for a week block safely.
+    Always unmerge the target range first to avoid Google Sheets errors.
+    """
+    label_value = f"W{week_index + 1}"
+
+    # Ensure we have at least 1 row to merge
+    if end_row < start_row:
+        end_row = start_row
+
+    # Unmerge the range first (safe even if nothing is merged)
+    try:
+        safe_request(sheet.unmerge_cells, f"B{start_row}:B{end_row}")
+    except Exception:
+        pass
+
+    # Set the week label in the top cell
+    safe_request(sheet.update, f"B{start_row}", [[label_value]])
+
+    # Merge the range
+    safe_request(sheet.merge_cells, f"B{start_row}:B{end_row}")
+
+    # Apply formatting
+    safe_request(sheet.format, f"B{start_row}", {
+        "textRotation": {"angle": 90},
+        "horizontalAlignment": "CENTER",
+        "verticalAlignment": "MIDDLE",
+        "textFormat": {"bold": True}
+    })
 
 
+def get_full_week_range(sheet, start_row, end_row, week_index, anchor_date):
+    """
+    Expands the given start/end rows to include all rows in the same week,
+    above and below, skipping month dividers.
+    """
+    rows = sheet.get_all_values()
+    total_rows = len(rows)
+    month_pattern = re.compile(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$")
+
+    # --- Scan upward ---
+    week_start_row = start_row
+    for r in range(start_row - 2, -1, -1):  # 0-based
+        cell_a = rows[r][0].strip() if len(rows[r]) > 0 else ""
+        if month_pattern.match(cell_a):
+            break  # stop at month divider
+
+        if len(rows[r]) >= 3:
+            try:
+                date = datetime.strptime(rows[r][2].strip(), "%m/%d").date()
+            except:
+                break
+            if get_week_index(date, anchor_date) != week_index:
+                break
+            week_start_row = r + 1
+
+    # --- Scan downward ---
+    week_end_row = end_row
+    for r in range(end_row, total_rows):
+        cell_a = rows[r][0].strip() if len(rows[r]) > 0 else ""
+        if month_pattern.match(cell_a):
+            break  # stop at month divider
+
+        if len(rows[r]) >= 3:
+            try:
+                date = datetime.strptime(rows[r][2].strip(), "%m/%d").date()
+            except:
+                break
+            if get_week_index(date, anchor_date) != week_index:
+                break
+            week_end_row = r + 1
+
+    return week_start_row, week_end_row
 
 
